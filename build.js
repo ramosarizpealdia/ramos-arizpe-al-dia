@@ -678,19 +678,31 @@ if (nationalExtras) {
 // bloque de demostración del index.html original llegue al sitio publicado.
 
 // Política + Economía: si no existen notas reales en esas categorías, elimina TODO el módulo.
+// Usamos posiciones reales del HTML en vez de regex porque este módulo contiene estructura anidada.
 if (!categoryNotes(notes, "Política").length && !categoryNotes(notes, "Economía").length) {
-  home = home.replace(
-    /<section class="container split-sections">[\s\S]*?<\/section>\s*(?=<section class="container opinion" id="opinion">)/,
-    ""
-  );
+  const splitStart = home.indexOf('<section class="container split-sections">');
+  if (splitStart !== -1) {
+    let splitEnd = home.indexOf('<section class="container opinion" id="opinion">', splitStart);
+    if (splitEnd === -1) {
+      splitEnd = home.indexOf('<section class="newsletter">', splitStart);
+    }
+    if (splitEnd !== -1) {
+      home = home.slice(0, splitStart) + home.slice(splitEnd);
+      console.log("Módulo demo Política/Economía eliminado correctamente.");
+    }
+  }
 }
 
 // Opinión: si no existen notas reales, elimina el módulo de demostración.
 if (!categoryNotes(notes, "Opinión").length) {
-  home = home.replace(
-    /<section class="container opinion" id="opinion">[\s\S]*?<\/section>\s*(?=<section class="newsletter">)/,
-    ""
-  );
+  const opinionStart = home.indexOf('<section class="container opinion" id="opinion">');
+  if (opinionStart !== -1) {
+    const opinionEnd = home.indexOf('<section class="newsletter">', opinionStart);
+    if (opinionEnd !== -1) {
+      home = home.slice(0, opinionStart) + home.slice(opinionEnd);
+      console.log("Módulo demo Opinión eliminado correctamente.");
+    }
+  }
 }
 
 // Seguridad: si existen notas reales, no debe sobrevivir el texto demo.
