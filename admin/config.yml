@@ -33,9 +33,27 @@ collections:
         name: summary
         widget: text
         required: false
-      - label: Categoría
+      - label: Sección principal
         name: category
         widget: select
+        hint: "Elige la sección principal. Esta definirá la URL y la etiqueta principal de la nota."
+        options:
+          - México
+          - Coahuila
+          - Ramos Arizpe
+          - Región Sureste
+          - Política
+          - Seguridad
+          - Economía
+          - Estados
+          - Mundo
+          - Opinión
+      - label: Mostrar también en
+        name: sections
+        widget: select
+        multiple: true
+        required: false
+        hint: "Opcional. Puedes elegir una o varias secciones adicionales para que la misma nota aparezca también ahí."
         options:
           - México
           - Coahuila
