@@ -192,6 +192,232 @@ function renderLatest(notes) {
   </section>`;
 }
 
+
+function categoryNotes(notes, category) {
+  return notes.filter(n => String(n.category || "").toLowerCase() === String(category).toLowerCase());
+}
+
+function noteLink(note, inner) {
+  return `<a href="${articleURL(note)}">${inner}</a>`;
+}
+
+function renderCoahuilaSection(notes) {
+  const coahuila = categoryNotes(notes, "Coahuila");
+  const ramos = categoryNotes(notes, "Ramos Arizpe");
+  const region = categoryNotes(notes, "Región Sureste");
+  const pool = [...coahuila, ...ramos, ...region]
+    .sort((a, b) => parseDate(b.date) - parseDate(a.date));
+
+  if (!pool.length) return "";
+
+  const feature = coahuila[0] || pool[0];
+  const used = new Set([feature.slug]);
+  const stack = [];
+
+  for (const candidate of [ramos[0], region[0], coahuila[1], ...pool]) {
+    if (candidate && !used.has(candidate.slug)) {
+      stack.push(candidate);
+      used.add(candidate.slug);
+    }
+    if (stack.length === 3) break;
+  }
+
+  return `<section class="container section-block" id="coahuila">
+    <div class="section-header">
+      <div><span class="section-kicker">NUESTRA REGIÓN</span><h2>Coahuila</h2></div>
+      <nav>
+        <a href="/coahuila/">Coahuila</a>
+        <a href="/ramos-arizpe/">Ramos Arizpe</a>
+        <a href="/region-sureste/">Región Sureste</a>
+      </nav>
+    </div>
+    <div class="regional-grid">
+      <article class="regional-feature">
+        ${noteLink(feature, `
+          ${imageMarkup(feature, "regional-photo", "FOTO COAHUILA")}
+          <span class="section-label">${esc(feature.category)}</span>
+          <h3>${esc(feature.title)}</h3>
+          ${feature.summary ? `<p>${esc(feature.summary)}</p>` : ""}
+        `)}
+      </article>
+      <div class="regional-stack">
+        ${stack.map((n, i) => `<article${n.category === "Ramos Arizpe" ? ' id="ramos"' : ""}>
+          ${imageMarkup(n, "thumb", "FOTO")}
+          <div>
+            <span class="section-label">${esc(n.category)}</span>
+            <h4>${noteLink(n, esc(n.title))}</h4>
+          </div>
+        </article>`).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderSecuritySection(notes) {
+  const list = categoryNotes(notes, "Seguridad").slice(0, 3);
+  if (!list.length) return "";
+  const [feature, second, third] = list;
+
+  return `<section class="dark-band" id="seguridad">
+    <div class="container">
+      <div class="section-header inverted">
+        <div><span class="section-kicker">COBERTURA</span><h2>Seguridad</h2></div>
+        <a href="/seguridad/">Más noticias →</a>
+      </div>
+      <div class="dark-grid">
+        <article class="dark-feature">
+          ${noteLink(feature, `
+            ${imageMarkup(feature, "dark-photo", "FOTOGRAFÍA")}
+            <span class="section-label">${esc(feature.category)}</span>
+            <h3>${esc(feature.title)}</h3>
+            ${feature.summary ? `<p>${esc(feature.summary)}</p>` : ""}
+          `)}
+        </article>
+        ${second ? `<article class="dark-card">
+          <span class="section-label">${esc(second.category)}</span>
+          <h4>${noteLink(second, esc(second.title))}</h4>
+          ${second.summary ? `<p>${esc(second.summary)}</p>` : ""}
+        </article>` : `<article class="dark-card empty-editorial"><span>Sin más publicaciones recientes</span></article>`}
+        ${third ? `<article class="dark-card">
+          <span class="section-label">${esc(third.category)}</span>
+          <h4>${noteLink(third, esc(third.title))}</h4>
+          ${third.summary ? `<p>${esc(third.summary)}</p>` : ""}
+        </article>` : `<article class="dark-card empty-editorial"><span>Sin más publicaciones recientes</span></article>`}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderPoliticsEconomySection(notes) {
+  const politics = categoryNotes(notes, "Política").slice(0, 2);
+  const economy = categoryNotes(notes, "Economía").slice(0, 4);
+
+  if (!politics.length && !economy.length) return "";
+
+  const politicsHtml = politics.length ? `
+    <div class="split-main" id="politica">
+      <div class="section-header simple"><div><span class="section-kicker">AGENDA PÚBLICA</span><h2>Política</h2></div></div>
+      ${politics.map(n => `<article class="wide-story">
+        ${imageMarkup(n, "wide-photo", "FOTO")}
+        <div>
+          <span class="section-label">${esc(n.category)}</span>
+          <h3>${noteLink(n, esc(n.title))}</h3>
+          ${n.summary ? `<p>${esc(n.summary)}</p>` : ""}
+          <div class="byline">${esc(n.author)} <span>•</span> ${esc(formatDate(n.date))}</div>
+        </div>
+      </article>`).join("")}
+    </div>` : "";
+
+  const economyHtml = economy.length ? `
+    <aside class="split-side" id="economia">
+      <div class="section-header simple"><div><span class="section-kicker">NEGOCIOS</span><h2>Economía</h2></div></div>
+      <div class="market-bar"><div><span>DÓLAR</span><strong>$—</strong></div><div><span>IPC</span><strong>—</strong></div><div><span>WTI</span><strong>$—</strong></div></div>
+      <article class="economy-lead">
+        <span class="section-label">${esc(economy[0].category)}</span>
+        <h3>${noteLink(economy[0], esc(economy[0].title))}</h3>
+        ${economy[0].summary ? `<p>${esc(economy[0].summary)}</p>` : ""}
+      </article>
+      ${economy.length > 1 ? `<ol class="economy-list">
+        ${economy.slice(1,4).map((n, i) => `<li><span>${String(i+1).padStart(2,"0")}</span>${noteLink(n, esc(n.title))}</li>`).join("")}
+      </ol>` : ""}
+    </aside>` : "";
+
+  return `<section class="container split-sections">${politicsHtml}${economyHtml}</section>`;
+}
+
+function renderOpinionSection(notes) {
+  const list = categoryNotes(notes, "Opinión").slice(0, 3);
+  if (!list.length) return "";
+
+  return `<section class="container opinion" id="opinion">
+    <div class="section-header">
+      <div><span class="section-kicker">ANÁLISIS</span><h2>Opinión</h2></div>
+      <a href="/opinion/">Todas las opiniones →</a>
+    </div>
+    <div class="opinion-grid">
+      ${list.map((n, i) => `<article>
+        <div class="avatar">${i === 0 ? "AR" : String(i).padStart(2,"0")}</div>
+        <span>${esc(n.category)}</span>
+        <h3>${noteLink(n, esc(n.title))}</h3>
+        <p>${esc(n.author)}</p>
+      </article>`).join("")}
+    </div>
+  </section>`;
+}
+
+function renderNationalExtraSections(notes) {
+  const categories = ["México", "Estados", "Mundo"];
+  const blocks = categories.map(cat => {
+    const list = categoryNotes(notes, cat).slice(0, 4);
+    if (!list.length) return "";
+    return `<section class="container generated-category-section" id="${slugify(cat)}">
+      <div class="section-header">
+        <div><span class="section-kicker">COBERTURA</span><h2>${esc(cat)}</h2></div>
+        <a href="/${slugify(cat)}/">Más noticias →</a>
+      </div>
+      <div class="generated-news-grid">
+        ${list.map(n => `<article class="generated-news-card">
+          ${noteLink(n, `
+            ${imageMarkup(n, "generated-card-image", "FOTO")}
+            <div class="generated-card-copy">
+              <span class="section-label">${esc(n.category)}</span>
+              <h3>${esc(n.title)}</h3>
+              ${n.summary ? `<p>${esc(n.summary)}</p>` : ""}
+              <div class="byline">${esc(n.author)} <span>•</span> ${esc(formatDate(n.date))}</div>
+            </div>
+          `)}
+        </article>`).join("")}
+      </div>
+    </section>`;
+  }).filter(Boolean);
+
+  return blocks.join("");
+}
+
+function categoryArchivePage(category, notes) {
+  const list = categoryNotes(notes, category);
+  const slug = slugify(category);
+  const cards = list.map(n => `<article class="generated-news-card">
+    ${noteLink(n, `
+      ${imageMarkup(n, "generated-card-image", "FOTO")}
+      <div class="generated-card-copy">
+        <span class="section-label">${esc(n.category)}</span>
+        <h3>${esc(n.title)}</h3>
+        ${n.summary ? `<p>${esc(n.summary)}</p>` : ""}
+        <div class="byline">${esc(n.author)} <span>•</span> ${esc(formatDate(n.date))}</div>
+      </div>
+    `)}
+  </article>`).join("");
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${esc(category)} | Ramos Arizpe al Día</title>
+  <meta name="description" content="Noticias de ${esc(category)} en Ramos Arizpe al Día.">
+  <link rel="canonical" href="https://ramosarizpealdia.com/${slug}/">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="utility-bar"><div class="container utility-inner"><div class="utility-left"><span>${esc(formatDate(new Date()))}</span><span class="edition">Edición digital</span></div></div></div>
+  <header class="masthead">
+    <div class="container masthead-inner">
+      <a class="identity" href="/" aria-label="Ramos Arizpe al Día">
+        <img src="/logo-ramos-arizpe-al-dia.jpg" alt="Ramos Arizpe al Día">
+        <div class="wordmark"><span class="wordmark-main">RAMOS ARIZPE</span><span class="wordmark-sub">AL DÍA</span></div>
+      </a>
+    </div>
+  </header>
+  <main class="container category-page">
+    <div class="section-header"><div><span class="section-kicker">SECCIÓN</span><h1>${esc(category)}</h1></div></div>
+    ${cards ? `<div class="generated-news-grid">${cards}</div>` : `<p class="empty-category">Aún no hay publicaciones en esta sección.</p>`}
+  </main>
+  <footer><div class="container footer-bottom"><span>© ${new Intl.DateTimeFormat("en", { timeZone: "America/Monterrey", year: "numeric" }).format(new Date())} Ramos Arizpe al Día</span></div></footer>
+</body>
+</html>`;
+}
+
 function articlePage(note) {
   const canonical = `https://ramosarizpealdia.com${articleURL(note)}`;
   const image = note.image ? `https://ramosarizpealdia.com${note.image.startsWith("/") ? note.image : "/" + note.image}` : "https://ramosarizpealdia.com/logo-ramos-arizpe-al-dia.jpg";
@@ -311,6 +537,18 @@ if (lead) {
   home = home.replace('<div class="container rule"></div>', `${latest}<div class="container rule"></div>`);
 }
 
+// Sustituye los módulos de demostración por noticias reales según categoría.
+home = home.replace(/<section class="container section-block" id="coahuila">[\s\S]*?<\/section>/, renderCoahuilaSection(notes));
+home = home.replace(/<section class="dark-band" id="seguridad">[\s\S]*?<\/section>/, renderSecuritySection(notes));
+home = home.replace(/<section class="container split-sections">[\s\S]*?<\/section>/, renderPoliticsEconomySection(notes));
+home = home.replace(/<section class="container opinion" id="opinion">[\s\S]*?<\/section>/, renderOpinionSection(notes));
+
+// México, Estados y Mundo se agregan como módulos reales cuando haya contenido.
+const nationalExtras = renderNationalExtraSections(notes);
+if (nationalExtras) {
+  home = home.replace('<section class="newsletter">', `${nationalExtras}<section class="newsletter">`);
+}
+
 fs.writeFileSync(path.join(dist, "index.html"), home);
 
 const extraCss = `
@@ -333,6 +571,16 @@ const extraCss = `
 .article-body p{margin:0 0 1.3em}
 .article-body h2,.article-body h3{font-family:"Libre Franklin",Arial,sans-serif;line-height:1.15;margin-top:1.8em}
 .article-body img{max-width:100%;height:auto}
+.regional-feature>a,.dark-feature>a,.dark-card a,.wide-story a,.economy-lead a,.economy-list a,.opinion-grid a{color:inherit;text-decoration:none}
+.regional-feature>a{display:block}
+.regional-stack article .thumb{overflow:hidden}
+.regional-stack article .thumb.article-cover{object-fit:cover}
+.dark-feature .article-cover,.wide-story .article-cover{object-fit:cover}
+.dark-card.empty-editorial{display:flex;align-items:center;justify-content:center;min-height:140px;opacity:.55}
+.generated-category-section{padding-top:38px;padding-bottom:48px;border-top:1px solid #e3e3e3}
+.category-page{padding-top:48px;padding-bottom:80px}
+.category-page .section-header h1{font-family:"Source Serif 4",Georgia,serif;font-size:48px;margin:0}
+.empty-category{padding:40px 0;color:#666}
 @media(max-width:800px){
   .generated-news-grid{grid-template-columns:1fr}
   .article-page{padding-top:28px}
@@ -350,5 +598,13 @@ for (const note of notes) {
   fs.writeFileSync(path.join(pageDir, "index.html"), articlePage(note));
 }
 
+// Genera una página de archivo para cada categoría usada en el CMS.
+const allCategories = ["México","Coahuila","Ramos Arizpe","Región Sureste","Política","Seguridad","Economía","Estados","Mundo","Opinión"];
+for (const category of allCategories) {
+  const categoryDir = path.join(dist, slugify(category));
+  fs.mkdirSync(categoryDir, { recursive: true });
+  fs.writeFileSync(path.join(categoryDir, "index.html"), categoryArchivePage(category, notes));
+}
+
 buildSitemaps(notes);
-console.log(`Sitio generado con ${notes.length} noticia(s).`);
+console.log(`Sitio generado con ${notes.length} noticia(s) y secciones automáticas.`);
