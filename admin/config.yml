@@ -58,7 +58,6 @@ collections:
         format: "YYYY-MM-DDTHH:mm:ssZ"
         picker_utc: false
         hint: "Usa la fecha y hora de Ramos Arizpe al momento de publicar."
-        format: "YYYY-MM-DDTHH:mm:ss.SSSZ"
       - label: Imagen principal
         name: image
         widget: image
