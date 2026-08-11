@@ -7,6 +7,6 @@ button?.addEventListener('click', () => {
 const dateEl = document.querySelector('#current-date');
 if (dateEl) {
   const now = new Date();
-  const text = new Intl.DateTimeFormat('es-MX', {weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(now);
+  const text = new Intl.DateTimeFormat('es-MX', {timeZone:'America/Monterrey',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(now);
   dateEl.textContent = text.charAt(0).toUpperCase() + text.slice(1);
 }

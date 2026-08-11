@@ -72,10 +72,11 @@ function formatDate(dateValue, withTime = false) {
   const d = parseDate(dateValue);
   if (Number.isNaN(d.getTime())) return "";
   return new Intl.DateTimeFormat("es-MX", {
+    timeZone: "America/Monterrey",
     day: "numeric",
     month: "long",
     year: "numeric",
-    ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {})
+    ...(withTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {})
   }).format(d);
 }
 
@@ -144,7 +145,7 @@ function renderLead(notes) {
 
   const minuteHtml = minute.map(n => {
     const d = parseDate(n.date);
-    const time = Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
+    const time = Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString("es-MX", { timeZone: "America/Monterrey", hour: "2-digit", minute: "2-digit", hour12: false });
     return `<article><time>${esc(time)}</time><div><span>${esc(n.category)}</span><h3><a href="${articleURL(n)}">${esc(n.title)}</a></h3></div></article>`;
   }).join("\n");
 
@@ -261,7 +262,7 @@ function articlePage(note) {
   </main>
   <footer>
     <div class="container footer-top"><div class="footer-brand"><img src="/logo-ramos-arizpe-al-dia.jpg" alt="Ramos Arizpe al Día"><div><strong>RAMOS ARIZPE AL DÍA</strong><span>Información de México y Coahuila</span></div></div></div>
-    <div class="container footer-bottom"><span>© ${new Date().getFullYear()} Ramos Arizpe al Día</span></div>
+    <div class="container footer-bottom"><span>© ${new Intl.DateTimeFormat("en", { timeZone: "America/Monterrey", year: "numeric" }).format(new Date())} Ramos Arizpe al Día</span></div>
   </footer>
 </body>
 </html>`;
