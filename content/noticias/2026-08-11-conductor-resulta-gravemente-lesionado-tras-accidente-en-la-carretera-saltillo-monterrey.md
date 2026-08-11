@@ -6,7 +6,7 @@ summary: >
   contra una barrera metálica a la altura del kilómetro 34, en Ramos Arizpe.
 category: Seguridad
 author: Alejandro Recendiz
-date: 10/08/2026T14:00
+date: 10/08/2026T23:34
 image: /uploads/3d697d99-02d0-46f2-bc50-a97b74e66cba.jpg
 featured: true
 ---
