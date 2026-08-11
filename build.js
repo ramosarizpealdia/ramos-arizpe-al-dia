@@ -84,49 +84,161 @@ function parseFrontMatter(raw, filename) {
   if (!normalized.startsWith("---\n")) {
     throw new Error(`Front matter faltante en ${filename}`);
   }
+
   const end = normalized.indexOf("\n---", 4);
   if (end === -1) throw new Error(`Front matter sin cerrar en ${filename}`);
 
-  const header = normalized.slice(4, end).split("\n");
+  const headerLines = normalized.slice(4, end).split("\n");
   const body = normalized.slice(end + 4).replace(/^\n+/, "");
   const data = {};
+  let i = 0;
 
-  let activeListKey = null;
+  while (i < headerLines.length) {
+    const original = headerLines[i].replace(/\t/g, "  ");
+    const trimmed = original.trim();
 
-  for (const originalLine of header) {
-    const line = originalLine.replace(/\t/g, "  ");
-    if (!line.trim() || line.trimStart().startsWith("#")) continue;
-
-    const listMatch = line.match(/^\s*-\s+(.*)$/);
-    if (listMatch && activeListKey) {
-      data[activeListKey].push(stripQuotes(listMatch[1]));
+    if (!trimmed || trimmed.startsWith("#")) {
+      i++;
       continue;
     }
 
-    const keyMatch = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (!keyMatch) continue;
-
-    const [, key, rawValue] = keyMatch;
-    const value = rawValue.trim();
-
-    if (value === "") {
-      data[key] = [];
-      activeListKey = key;
+    const keyMatch = original.match(/^([A-Za-z0-9_-]+):(?:\s*(.*))?$/);
+    if (!keyMatch) {
+      i++;
       continue;
     }
 
-    activeListKey = null;
+    const key = keyMatch[1];
+    let rawValue = (keyMatch[2] ?? "").trim();
 
-    if (value === "true") data[key] = true;
-    else if (value === "false") data[key] = false;
-    else if (value.startsWith("[") && value.endsWith("]")) {
-      data[key] = value.slice(1, -1)
+    // Soporta bloques YAML de Decap: >, >-, | y |-
+    if (/^[>|][+-]?$/.test(rawValue)) {
+      const style = rawValue[0];
+      const parts = [];
+      i++;
+
+      while (i < headerLines.length) {
+        const next = headerLines[i].replace(/\t/g, "  ");
+
+        if (/^[A-Za-z0-9_-]+:\s*/.test(next)) break;
+
+        if (!next.trim()) {
+          parts.push("");
+          i++;
+          continue;
+        }
+
+        if (!/^\s+/.test(next)) break;
+
+        parts.push(next.replace(/^\s+/, ""));
+        i++;
+      }
+
+      if (style === ">") {
+        const paragraphs = [];
+        let current = [];
+
+        for (const part of parts) {
+          if (part === "") {
+            if (current.length) {
+              paragraphs.push(current.join(" "));
+              current = [];
+            }
+          } else {
+            current.push(part);
+          }
+        }
+
+        if (current.length) paragraphs.push(current.join(" "));
+        data[key] = paragraphs.join("\n\n").trim();
+      } else {
+        data[key] = parts.join("\n").trim();
+      }
+
+      continue;
+    }
+
+    // Valor vacío: puede ser lista YAML.
+    if (rawValue === "") {
+      const items = [];
+      let j = i + 1;
+
+      while (j < headerLines.length) {
+        const next = headerLines[j].replace(/\t/g, "  ");
+        const listMatch = next.match(/^\s*-\s+(.*)$/);
+
+        if (listMatch) {
+          items.push(stripQuotes(listMatch[1]));
+          j++;
+          continue;
+        }
+
+        if (!next.trim()) {
+          j++;
+          continue;
+        }
+
+        break;
+      }
+
+      if (items.length) {
+        data[key] = items;
+        i = j;
+        continue;
+      }
+
+      data[key] = "";
+      i++;
+      continue;
+    }
+
+    if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
+      data[key] = rawValue.slice(1, -1)
         .split(",")
         .map(v => stripQuotes(v))
         .filter(Boolean);
-    } else {
-      data[key] = stripQuotes(value);
+      i++;
+      continue;
     }
+
+    if (rawValue === "true") {
+      data[key] = true;
+      i++;
+      continue;
+    }
+
+    if (rawValue === "false") {
+      data[key] = false;
+      i++;
+      continue;
+    }
+
+    // Soporta valores largos que Decap/YAML divide físicamente en varias líneas.
+    const scalarParts = [rawValue];
+    let j = i + 1;
+
+    while (j < headerLines.length) {
+      const next = headerLines[j].replace(/\t/g, "  ");
+
+      if (/^[A-Za-z0-9_-]+:\s*/.test(next)) break;
+      if (/^\s*-\s+/.test(next)) break;
+
+      if (!next.trim()) {
+        j++;
+        continue;
+      }
+
+      if (/^\s+/.test(next)) {
+        scalarParts.push(next.trim());
+        j++;
+        continue;
+      }
+
+      break;
+    }
+
+    data[key] = stripQuotes(scalarParts.join(" ").trim());
+    i = j;
   }
 
   return { data, body };
