@@ -266,12 +266,10 @@ function renderSecuritySection(notes) {
       </div>
       <div class="dark-grid">
         <article class="dark-feature">
-          ${noteLink(feature, `
-            ${imageMarkup(feature, "dark-photo", "FOTOGRAFÍA")}
-            <span class="section-label">${esc(feature.category)}</span>
-            <h3>${esc(feature.title)}</h3>
-            ${feature.summary ? `<p>${esc(feature.summary)}</p>` : ""}
-          `)}
+          ${noteLink(feature, imageMarkup(feature, "dark-photo", "FOTOGRAFÍA"))}
+          <span class="section-label">${esc(feature.category)}</span>
+          <h3>${noteLink(feature, esc(feature.title))}</h3>
+          ${feature.summary ? `<p>${esc(feature.summary)}</p>` : ""}
         </article>
         ${second ? `<article class="dark-card">
           <span class="section-label">${esc(second.category)}</span>
@@ -577,11 +575,158 @@ const extraCss = `
 .regional-stack article .thumb.article-cover{object-fit:cover}
 .dark-feature .article-cover,.wide-story .article-cover{object-fit:cover}
 .dark-card.empty-editorial{display:flex;align-items:center;justify-content:center;min-height:140px;opacity:.55}
+.dark-band{display:flow-root;position:relative;padding-bottom:64px}
+.dark-grid{align-items:start}
+.dark-feature{min-width:0}
+.dark-feature>a{display:block}
+.dark-feature h3{margin:8px 0 12px;overflow-wrap:anywhere}
+.dark-feature p{margin:0;line-height:1.5;color:#aebccb}
+.dark-feature .dark-photo{width:100%;height:285px;object-fit:cover}
+.newsletter{position:relative;clear:both;z-index:1;margin-top:0}
+/* Protección global contra solapamientos en todas las secciones dinámicas */
+.section-block,
+.split-sections,
+.opinion,
+.generated-category-section,
+.latest,
+.lead-grid,
+.dark-band{
+  display:flow-root;
+  position:relative;
+  clear:both;
+}
+
+.regional-grid,
+.dark-grid,
+.split-sections,
+.opinion-grid,
+.generated-news-grid,
+.latest-grid,
+.lead-grid{
+  align-items:start;
+}
+
+.regional-feature,
+.regional-stack article,
+.dark-feature,
+.dark-card,
+.wide-story,
+.economy-lead,
+.economy-list li,
+.opinion-grid article,
+.generated-news-card,
+.latest-card,
+.lead-main,
+.lead-side{
+  min-width:0;
+}
+
+.regional-feature h3,
+.regional-stack h4,
+.dark-feature h3,
+.dark-card h4,
+.wide-story h3,
+.economy-lead h3,
+.economy-list li,
+.opinion-grid h3,
+.generated-news-card h3,
+.latest-card h3,
+.lead-main h1,
+.lead-side h3{
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+
+.regional-feature p,
+.dark-feature p,
+.dark-card p,
+.wide-story p,
+.economy-lead p,
+.generated-news-card p,
+.latest-card p,
+.lead-main p,
+.lead-side p{
+  overflow-wrap:anywhere;
+}
+
+.regional-feature img,
+.regional-stack img,
+.dark-feature img,
+.wide-story img,
+.generated-news-card img,
+.latest-card img,
+.lead-main img,
+.lead-side img{
+  display:block;
+  width:100%;
+  max-width:100%;
+  height:auto;
+  object-fit:cover;
+}
+
+.section-block,
+.split-sections,
+.opinion,
+.generated-category-section,
+.latest{
+  padding-bottom:48px;
+}
+
+.section-block + *,
+.split-sections + *,
+.opinion + *,
+.generated-category-section + *,
+.latest + *,
+.dark-band + *{
+  clear:both;
+}
+
+.newsletter{
+  position:relative;
+  clear:both;
+  z-index:1;
+}
+
+@media(max-width:1000px){
+  .regional-grid,
+  .dark-grid,
+  .split-sections,
+  .opinion-grid,
+  .generated-news-grid,
+  .latest-grid,
+  .lead-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:800px){
+  .section-block,
+  .split-sections,
+  .opinion,
+  .generated-category-section,
+  .latest,
+  .dark-band{
+    padding-bottom:36px;
+  }
+
+  .regional-feature h3,
+  .dark-feature h3,
+  .wide-story h3,
+  .economy-lead h3,
+  .generated-news-card h3,
+  .latest-card h3,
+  .lead-main h1,
+  .lead-side h3{
+    line-height:1.12;
+  }
+}
 .generated-category-section{padding-top:38px;padding-bottom:48px;border-top:1px solid #e3e3e3}
 .category-page{padding-top:48px;padding-bottom:80px}
 .category-page .section-header h1{font-family:"Source Serif 4",Georgia,serif;font-size:48px;margin:0}
 .empty-category{padding:40px 0;color:#666}
 @media(max-width:800px){
+  .dark-band{padding-bottom:48px}
+  .dark-feature .dark-photo{height:auto;aspect-ratio:16/9}
   .generated-news-grid{grid-template-columns:1fr}
   .article-page{padding-top:28px}
   .article-page h1{font-size:42px}
