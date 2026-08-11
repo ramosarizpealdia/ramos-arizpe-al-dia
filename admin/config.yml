@@ -1,0 +1,69 @@
+backend:
+  name: git-gateway
+  branch: main
+
+site_url: https://ramosarizpealdia.com
+display_url: https://ramosarizpealdia.com
+
+media_folder: uploads
+public_folder: /uploads
+
+publish_mode: simple
+
+slug:
+  encoding: ascii
+  clean_accents: true
+  sanitize_replacement: "-"
+
+collections:
+  - name: noticias
+    label: Noticias
+    label_singular: Noticia
+    folder: content/noticias
+    create: true
+    extension: md
+    format: frontmatter
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    summary: "{{title}} — {{category}}"
+    fields:
+      - label: Título
+        name: title
+        widget: string
+      - label: Subtítulo / Bajada
+        name: summary
+        widget: text
+        required: false
+      - label: Categoría
+        name: category
+        widget: select
+        options:
+          - México
+          - Coahuila
+          - Ramos Arizpe
+          - Región Sureste
+          - Política
+          - Seguridad
+          - Economía
+          - Estados
+          - Mundo
+          - Opinión
+      - label: Autor
+        name: author
+        widget: string
+        default: "Ramos Arizpe al Día"
+      - label: Fecha y hora
+        name: date
+        widget: datetime
+        date_format: "DD/MM/YYYY"
+        time_format: "HH:mm"
+      - label: Imagen principal
+        name: image
+        widget: image
+        required: false
+      - label: Destacar en portada
+        name: featured
+        widget: boolean
+        default: false
+      - label: Contenido de la nota
+        name: body
+        widget: markdown
