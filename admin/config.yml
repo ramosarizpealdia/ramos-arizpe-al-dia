@@ -23,7 +23,7 @@ collections:
     create: true
     extension: md
     format: frontmatter
-    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    slug: "{{slug}}"
     summary: "{{title}} — {{category}}"
     fields:
       - label: Título
@@ -54,8 +54,11 @@ collections:
       - label: Fecha y hora
         name: date
         widget: datetime
-        date_format: "DD/MM/YYYY"
-        time_format: "HH:mm"
+        default: "{{now}}"
+        format: "YYYY-MM-DDTHH:mm:ssZ"
+        picker_utc: false
+        hint: "Usa la fecha y hora de Ramos Arizpe al momento de publicar."
+        format: "YYYY-MM-DDTHH:mm:ss.SSSZ"
       - label: Imagen principal
         name: image
         widget: image
