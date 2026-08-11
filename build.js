@@ -343,6 +343,7 @@ function readNotes() {
         dateRaw,
         published,
         image: String(data.image || "").trim(),
+        imageCaption: String(data.image_caption || "").trim(),
         featured: data.featured === true || String(data.featured).toLowerCase() === "true",
         body
       };
@@ -698,7 +699,10 @@ function articlePage(note) {
         <h1>${escapeHtml(note.title)}</h1>
         ${note.summary ? `<p class="article-deck">${escapeHtml(note.summary)}</p>` : ""}
         <div class="article-meta">Por <strong>${escapeHtml(note.author)}</strong> · ${escapeHtml(formatDate(note.published, true))}</div>
-        ${note.image ? `<img class="article-hero" src="${escapeHtml(note.image)}" alt="${escapeHtml(note.title)}">` : ""}
+        ${note.image ? `<figure class="article-media">
+          <img class="article-hero" src="${escapeHtml(note.image)}" alt="${escapeHtml(note.imageCaption || note.title)}">
+          ${note.imageCaption ? `<figcaption>${escapeHtml(note.imageCaption)}</figcaption>` : ""}
+        </figure>` : ""}
         <div class="article-body">${renderMarkdown(note.body)}</div>
       </article>
     </main>`
