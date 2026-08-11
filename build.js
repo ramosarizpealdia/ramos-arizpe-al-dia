@@ -1,18 +1,56 @@
 const fs = require("fs");
 const path = require("path");
-const matter = require("gray-matter");
-const { marked } = require("marked");
 
-const root = process.cwd();
-const dist = path.join(root, "dist");
-const contentDir = path.join(root, "content", "noticias");
+const ROOT = process.cwd();
+const DIST = path.join(ROOT, "dist");
+const CONTENT_DIR = path.join(ROOT, "content", "noticias");
+const SITE_URL = "https://ramosarizpealdia.com";
+const TIME_ZONE = "America/Monterrey";
+const LOCAL_OFFSET = "-06:00";
 
-function esc(value = "") {
+const CATEGORIES = [
+  "México",
+  "Coahuila",
+  "Ramos Arizpe",
+  "Saltillo",
+  "Región Sureste",
+  "Política",
+  "Seguridad",
+  "Economía",
+  "Estados",
+  "Mundo",
+  "Opinión"
+];
+
+const MAIN_NAV = [
+  ["Inicio", "/"],
+  ["México", "/mexico/"],
+  ["Coahuila", "/coahuila/"],
+  ["Ramos Arizpe", "/ramos-arizpe/"],
+  ["Saltillo", "/saltillo/"],
+  ["Seguridad", "/seguridad/"],
+  ["Política", "/politica/"],
+  ["Economía", "/economia/"]
+];
+
+const MORE_NAV = [
+  ["Región Sureste", "/region-sureste/"],
+  ["Estados", "/estados/"],
+  ["Mundo", "/mundo/"],
+  ["Opinión", "/opinion/"]
+];
+
+function escapeHtml(value = "") {
   return String(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function escapeXml(value = "") {
+  return escapeHtml(value);
 }
 
 function slugify(value = "") {
@@ -24,137 +62,133 @@ function slugify(value = "") {
     .replace(/^-+|-+$/g, "");
 }
 
-function parseDate(value) {
-  if (value === undefined || value === null || value === "") {
-    throw new Error("La noticia no tiene fecha de publicación.");
-  }
-
-  // gray-matter/js-yaml puede convertir automáticamente una fecha YAML en un objeto Date.
-  // Si ya es Date, se conserva exactamente el instante guardado y NO se reemplaza por la hora actual.
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) {
-      throw new Error("La noticia contiene una fecha inválida.");
+function stripQuotes(value) {
+  const s = String(value ?? "").trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    const inner = s.slice(1, -1);
+    if (s.startsWith('"')) {
+      try { return JSON.parse(s); } catch (_) { return inner; }
     }
-    return new Date(value.getTime());
+    return inner.replace(/''/g, "'");
   }
-
-  const raw = String(value).trim();
-
-  // Formato principal usado por el CMS: DD/MM/YYYYTHH:MM
-  let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})T(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-  if (m) {
-    const [, dd, mm, yyyy, hh, min, sec = "00"] = m;
-    return dateInMonterrey(
-      Number(yyyy), Number(mm), Number(dd),
-      Number(hh), Number(min), Number(sec)
-    );
-  }
-
-  // DD/MM/YYYY HH:MM o DD/MM/YYYY, HH:MM
-  m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-  if (m) {
-    const [, dd, mm, yyyy, hh = "00", min = "00", sec = "00"] = m;
-    return dateInMonterrey(
-      Number(yyyy), Number(mm), Number(dd),
-      Number(hh), Number(min), Number(sec)
-    );
-  }
-
-  // ISO con zona u offset explícito: conserva el instante exacto.
-  if (/^\d{4}-\d{2}-\d{2}T/.test(raw) && (/[zZ]$/.test(raw) || /[+-]\d{2}:\d{2}$/.test(raw))) {
-    const parsed = new Date(raw);
-    if (!Number.isNaN(parsed.getTime())) return parsed;
-  }
-
-  // ISO sin zona: se interpreta como hora editorial local de Ramos Arizpe/Saltillo.
-  m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?$/);
-  if (m) {
-    const [, yyyy, mm, dd, hh = "00", min = "00", sec = "00"] = m;
-    return dateInMonterrey(
-      Number(yyyy), Number(mm), Number(dd),
-      Number(hh), Number(min), Number(sec)
-    );
-  }
-
-  // Compatibilidad con Date convertido a texto por JavaScript:
-  // "Tue Aug 11 2026 06:09:00 GMT+0000 (Coordinated Universal Time)"
-  if (/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s/i.test(raw) && /GMT[+-]\d{4}/i.test(raw)) {
-    const parsed = new Date(raw);
-    if (!Number.isNaN(parsed.getTime())) return parsed;
-  }
-
-  throw new Error(
-    `Fecha no reconocida: ${raw}. Corrige la fecha en /admin; nunca se sustituirá por la hora actual.`
-  );
+  return s;
 }
 
-function dateInMonterrey(year, month, day, hour = 0, minute = 0, second = 0) {
-  // Ramos Arizpe / Saltillo usan America/Monterrey (UTC-6 en la operación actual).
-  // La hora introducida en el CMS se convierte a un instante UTC, pero siempre se
-  // vuelve a mostrar usando America/Monterrey.
-  if (
-    !Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day) ||
-    !Number.isInteger(hour) || !Number.isInteger(minute) || !Number.isInteger(second) ||
-    year < 2000 || year > 2100 ||
-    month < 1 || month > 12 ||
-    day < 1 || day > 31 ||
-    hour < 0 || hour > 23 ||
-    minute < 0 || minute > 59 ||
-    second < 0 || second > 59
-  ) {
-    throw new Error("Fecha u hora inválida en una noticia.");
+/**
+ * Parser deliberadamente pequeño para el front matter que escribe Decap CMS.
+ * Mantiene las fechas COMO TEXTO: evita que YAML/gray-matter las convierta
+ * automáticamente a Date y cambie su interpretación según el servidor.
+ */
+function parseFrontMatter(raw, filename) {
+  const normalized = raw.replace(/\r\n/g, "\n");
+  if (!normalized.startsWith("---\n")) {
+    throw new Error(`Front matter faltante en ${filename}`);
+  }
+  const end = normalized.indexOf("\n---", 4);
+  if (end === -1) throw new Error(`Front matter sin cerrar en ${filename}`);
+
+  const header = normalized.slice(4, end).split("\n");
+  const body = normalized.slice(end + 4).replace(/^\n+/, "");
+  const data = {};
+
+  let activeListKey = null;
+
+  for (const originalLine of header) {
+    const line = originalLine.replace(/\t/g, "  ");
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+
+    const listMatch = line.match(/^\s*-\s+(.*)$/);
+    if (listMatch && activeListKey) {
+      data[activeListKey].push(stripQuotes(listMatch[1]));
+      continue;
+    }
+
+    const keyMatch = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (!keyMatch) continue;
+
+    const [, key, rawValue] = keyMatch;
+    const value = rawValue.trim();
+
+    if (value === "") {
+      data[key] = [];
+      activeListKey = key;
+      continue;
+    }
+
+    activeListKey = null;
+
+    if (value === "true") data[key] = true;
+    else if (value === "false") data[key] = false;
+    else if (value.startsWith("[") && value.endsWith("]")) {
+      data[key] = value.slice(1, -1)
+        .split(",")
+        .map(v => stripQuotes(v))
+        .filter(Boolean);
+    } else {
+      data[key] = stripQuotes(value);
+    }
   }
 
-  const d = new Date(Date.UTC(year, month - 1, day, hour + 6, minute, second));
+  return { data, body };
+}
 
-  // Comprobamos que al representarla en Monterrey conserve los componentes editoriales.
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Monterrey",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false
-  }).formatToParts(d);
+function offsetToMinutes(offset) {
+  if (offset === "Z" || offset === "z") return 0;
+  const m = String(offset).match(/^([+-])(\d{2}):?(\d{2})$/);
+  if (!m) throw new Error(`Offset inválido: ${offset}`);
+  const sign = m[1] === "-" ? -1 : 1;
+  return sign * (Number(m[2]) * 60 + Number(m[3]));
+}
 
-  const obj = Object.fromEntries(parts.map(p => [p.type, p.value]));
-  if (
-    Number(obj.year) !== year ||
-    Number(obj.month) !== month ||
-    Number(obj.day) !== day ||
-    (Number(obj.hour) % 24) !== hour ||
-    Number(obj.minute) !== minute ||
-    Number(obj.second) !== second
-  ) {
-    throw new Error("La fecha no pudo fijarse correctamente en America/Monterrey.");
-  }
-
+function createInstant(year, month, day, hour, minute, second, offset = LOCAL_OFFSET) {
+  const offsetMinutes = offsetToMinutes(offset);
+  const utc = Date.UTC(year, month - 1, day, hour, minute, second) - offsetMinutes * 60_000;
+  const d = new Date(utc);
+  if (Number.isNaN(d.getTime())) throw new Error("Fecha inválida");
   return d;
 }
 
-function copyFile(name) {
-  const src = path.join(root, name);
-  if (fs.existsSync(src)) {
-    const dest = path.join(dist, name);
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(src, dest);
+function parsePublished(value, filename = "") {
+  const raw = String(value ?? "").trim();
+  if (!raw) throw new Error(`Falta fecha de publicación${filename ? ` en ${filename}` : ""}`);
+
+  let m;
+
+  // DD/MM/YYYYT14:00 o DD/MM/YYYY 14:00
+  m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:T|\s+)(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (m) {
+    const [, dd, mm, yyyy, hh, min, sec = "00"] = m;
+    return createInstant(+yyyy, +mm, +dd, +hh, +min, +sec, LOCAL_OFFSET);
   }
+
+  // YYYY-MM-DD HH:mm:ss -0600
+  m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?\s*([+-]\d{2}:?\d{2})$/);
+  if (m) {
+    const [, yyyy, mm, dd, hh, min, sec = "00", offset] = m;
+    return createInstant(+yyyy, +mm, +dd, +hh, +min, +sec, offset);
+  }
+
+  // ISO con offset/Z
+  m = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i);
+  if (m) {
+    const [, yyyy, mm, dd, hh, min, sec = "00", offset] = m;
+    return createInstant(+yyyy, +mm, +dd, +hh, +min, +sec, offset);
+  }
+
+  // ISO local sin zona: se asume Ramos Arizpe/Saltillo.
+  m = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (m) {
+    const [, yyyy, mm, dd, hh, min, sec = "00"] = m;
+    return createInstant(+yyyy, +mm, +dd, +hh, +min, +sec, LOCAL_OFFSET);
+  }
+
+  throw new Error(`Fecha no reconocida "${raw}"${filename ? ` en ${filename}` : ""}`);
 }
 
-function copyDir(name) {
-  const src = path.join(root, name);
-  if (fs.existsSync(src)) {
-    fs.cpSync(src, path.join(dist, name), { recursive: true });
-  }
-}
-
-function formatDate(dateValue, withTime = false) {
-  const d = parseDate(dateValue);
-  if (Number.isNaN(d.getTime())) return "";
+function formatDate(value, withTime = false) {
+  const d = value instanceof Date ? value : parsePublished(value);
   return new Intl.DateTimeFormat("es-MX", {
-    timeZone: "America/Monterrey",
+    timeZone: TIME_ZONE,
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -162,724 +196,684 @@ function formatDate(dateValue, withTime = false) {
   }).format(d);
 }
 
-function articleURL(note) {
-  return `/${slugify(note.category || "noticias")}/${note.slug}/`;
+function formatTime(value) {
+  const d = value instanceof Date ? value : parsePublished(value);
+  return new Intl.DateTimeFormat("es-MX", {
+    timeZone: TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(d);
 }
 
-function imageMarkup(note, className, fallbackText = "FOTOGRAFÍA") {
-  if (note.image) {
-    return `<img class="${className} article-cover" src="${esc(note.image)}" alt="${esc(note.title)}" loading="lazy">`;
+function currentLocalDate() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("es-MX", {
+    timeZone: TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(now);
+  return parts.charAt(0).toUpperCase() + parts.slice(1);
+}
+
+function markdownInline(text) {
+  let s = escapeHtml(text);
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+  s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
+  return s;
+}
+
+function renderMarkdown(markdown = "") {
+  const lines = String(markdown).replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  let paragraph = [];
+  let listType = null;
+  let listItems = [];
+
+  function flushParagraph() {
+    if (!paragraph.length) return;
+    out.push(`<p>${markdownInline(paragraph.join(" ").trim())}</p>`);
+    paragraph = [];
   }
-  return `<div class="${className} placeholder"><span>${fallbackText}</span></div>`;
+
+  function flushList() {
+    if (!listItems.length) return;
+    const tag = listType === "ol" ? "ol" : "ul";
+    out.push(`<${tag}>${listItems.map(item => `<li>${markdownInline(item)}</li>`).join("")}</${tag}>`);
+    listItems = [];
+    listType = null;
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+
+    if (!line.trim()) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,4})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      const level = heading[1].length + 1;
+      out.push(`<h${level}>${markdownInline(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const ul = line.match(/^\s*[-*]\s+(.+)$/);
+    if (ul) {
+      flushParagraph();
+      if (listType && listType !== "ul") flushList();
+      listType = "ul";
+      listItems.push(ul[1]);
+      continue;
+    }
+
+    const ol = line.match(/^\s*\d+\.\s+(.+)$/);
+    if (ol) {
+      flushParagraph();
+      if (listType && listType !== "ol") flushList();
+      listType = "ol";
+      listItems.push(ol[1]);
+      continue;
+    }
+
+    const quote = line.match(/^\s*>\s*(.+)$/);
+    if (quote) {
+      flushParagraph();
+      flushList();
+      out.push(`<blockquote>${markdownInline(quote[1])}</blockquote>`);
+      continue;
+    }
+
+    if (/^\s*---+\s*$/.test(line)) {
+      flushParagraph();
+      flushList();
+      out.push("<hr>");
+      continue;
+    }
+
+    if (listType) flushList();
+    paragraph.push(line.trim());
+  }
+
+  flushParagraph();
+  flushList();
+  return out.join("\n");
 }
 
-function loadNotes() {
-  if (!fs.existsSync(contentDir)) return [];
-  return fs.readdirSync(contentDir)
-    .filter(f => f.endsWith(".md"))
+function readNotes() {
+  if (!fs.existsSync(CONTENT_DIR)) return [];
+
+  return fs.readdirSync(CONTENT_DIR)
+    .filter(name => name.endsWith(".md"))
     .map(filename => {
-      const raw = fs.readFileSync(path.join(contentDir, filename), "utf8");
-      const parsed = matter(raw);
-      const data = parsed.data || {};
-      const base = filename.replace(/\.md$/i, "");
-      const primaryCategory = data.category || "Noticias";
-      const extraSections = Array.isArray(data.sections)
-        ? data.sections
-        : (data.sections ? [data.sections] : []);
-      const sections = [...new Set([primaryCategory, ...extraSections].filter(Boolean))];
+      const raw = fs.readFileSync(path.join(CONTENT_DIR, filename), "utf8");
+      const { data, body } = parseFrontMatter(raw, filename);
+
+      const title = String(data.title || "").trim();
+      const category = String(data.category || "").trim();
+      if (!title) throw new Error(`Falta title en ${filename}`);
+      if (!category) throw new Error(`Falta category en ${filename}`);
+      if (!CATEGORIES.includes(category)) {
+        throw new Error(`Categoría desconocida "${category}" en ${filename}`);
+      }
+
+      const dateRaw = String(data.date || "").trim();
+      const published = parsePublished(dateRaw, filename);
+
+      let extraSections = Array.isArray(data.sections) ? data.sections : [];
+      extraSections = extraSections.filter(section => CATEGORIES.includes(section));
+      const sections = [...new Set([category, ...extraSections])];
 
       return {
-        title: data.title || "Sin título",
-        summary: data.summary || "",
-        category: primaryCategory,
+        filename,
+        slug: filename.replace(/\.md$/i, ""),
+        title,
+        summary: String(data.summary || "").trim(),
+        category,
         sections,
-        author: data.author || "Ramos Arizpe al Día",
-        date: data.date,
-        image: data.image || "",
-        featured: Boolean(data.featured),
-        body: parsed.content || "",
-        slug: base
+        author: String(data.author || "Ramos Arizpe al Día").trim(),
+        dateRaw,
+        published,
+        image: String(data.image || "").trim(),
+        featured: data.featured === true || String(data.featured).toLowerCase() === "true",
+        body
       };
     })
-    .sort((a, b) => parseDate(b.date) - parseDate(a.date));
+    .sort((a, b) => b.published.getTime() - a.published.getTime());
 }
 
-function renderLead(notes) {
-  if (!notes.length) return null;
-  const featured = notes.find(n => n.featured) || notes[0];
-  const remaining = notes.filter(n => n !== featured);
-  const second = remaining[0];
-  const third = remaining[1];
-  const minute = notes.slice(0, 4);
+function articleUrl(note) {
+  return `/${slugify(note.category)}/${note.slug}/`;
+}
 
-  const secondHtml = second ? `
-    <article class="secondary-story">
-      <a href="${articleURL(second)}">
-        ${imageMarkup(second, "secondary-photo", "FOTO")}
-        <span class="section-label">${esc(second.category)}</span>
-        <h2>${esc(second.title)}</h2>
-        <div class="byline">${esc(second.author)} <span>•</span> ${esc(formatDate(second.date))}</div>
-      </a>
-    </article>` : "";
+function noteInSection(note, category) {
+  return note.sections.includes(category);
+}
 
-  const thirdHtml = third ? `
-    <article class="secondary-story text-only">
-      <a href="${articleURL(third)}">
-        <span class="section-label">${esc(third.category)}</span>
-        <h2>${esc(third.title)}</h2>
-        ${third.summary ? `<p>${esc(third.summary)}</p>` : ""}
-        <div class="byline">${esc(third.author)} <span>•</span> ${esc(formatDate(third.date))}</div>
-      </a>
-    </article>` : "";
+function notesFor(notes, category) {
+  return notes.filter(note => noteInSection(note, category));
+}
 
-  const minuteHtml = minute.map(n => {
-    const d = parseDate(n.date);
-    const time = Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString("es-MX", { timeZone: "America/Monterrey", hour: "2-digit", minute: "2-digit", hour12: false });
-    return `<article><time>${esc(time)}</time><div><span>${esc(n.category)}</span><h3><a href="${articleURL(n)}">${esc(n.title)}</a></h3></div></article>`;
-  }).join("\n");
+function img(note, className, fallback = "FOTOGRAFÍA") {
+  if (!note.image) return `<div class="${className} placeholder"><span>${fallback}</span></div>`;
+  return `<img class="${className}" src="${escapeHtml(note.image)}" alt="${escapeHtml(note.title)}" loading="lazy">`;
+}
 
-  return `<section class="container lead-grid" id="mexico">
-    <article class="lead-story">
-      <a href="${articleURL(featured)}">
-        ${imageMarkup(featured, "lead-photo", "FOTOGRAFÍA PRINCIPAL")}
-        <div class="lead-content">
-          <span class="section-label">${esc(featured.category)}</span>
-          <h1>${esc(featured.title)}</h1>
-          ${featured.summary ? `<p>${esc(featured.summary)}</p>` : ""}
-          <div class="byline">${esc(featured.author)} <span>•</span> ${esc(formatDate(featured.date, true))}</div>
+function navHtml() {
+  const links = MAIN_NAV.map(([label, href], i) =>
+    `<a${i === 0 ? ' class="active"' : ""} href="${href}">${escapeHtml(label)}</a>`
+  ).join("");
+
+  const more = MORE_NAV.map(([label, href]) =>
+    `<a href="${href}">${escapeHtml(label)}</a>`
+  ).join("");
+
+  return `<div class="nav-shell">
+    <div class="container nav-inner">
+      <nav class="main-nav" aria-label="Secciones">
+        ${links}
+        <div class="nav-more">
+          <button type="button" class="nav-more-button" aria-expanded="false">Más <span>▾</span></button>
+          <div class="nav-more-menu">${more}</div>
         </div>
-      </a>
-    </article>
-    <div class="lead-secondary">${secondHtml}${thirdHtml}</div>
-    <aside class="minute-column">
-      <div class="minute-title"><span>AL MINUTO</span><span>Últimas publicaciones</span></div>
-      ${minuteHtml}
-    </aside>
-  </section>`;
-}
-
-function renderLatest(notes) {
-  if (!notes.length) return "";
-  return `<section class="container generated-latest" id="ultimas">
-    <div class="section-header">
-      <div><span class="section-kicker">ACTUALIDAD</span><h2>Últimas noticias</h2></div>
-    </div>
-    <div class="generated-news-grid">
-      ${notes.slice(0, 9).map(n => `
-        <article class="generated-news-card">
-          <a href="${articleURL(n)}">
-            ${imageMarkup(n, "generated-card-image", "FOTO")}
-            <div class="generated-card-copy">
-              <span class="section-label">${esc(n.category)}</span>
-              <h3>${esc(n.title)}</h3>
-              ${n.summary ? `<p>${esc(n.summary)}</p>` : ""}
-              <div class="byline">${esc(n.author)} <span>•</span> ${esc(formatDate(n.date))}</div>
-            </div>
-          </a>
-        </article>`).join("")}
-    </div>
-  </section>`;
-}
-
-
-function categoryNotes(notes, category) {
-  const wanted = String(category || "").toLowerCase();
-  return notes.filter(n => {
-    const sections = Array.isArray(n.sections) && n.sections.length
-      ? n.sections
-      : [n.category];
-    return sections.some(section => String(section || "").toLowerCase() === wanted);
-  });
-}
-
-function noteLink(note, inner) {
-  return `<a href="${articleURL(note)}">${inner}</a>`;
-}
-
-function renderCoahuilaSection(notes) {
-  const coahuila = categoryNotes(notes, "Coahuila");
-  const ramos = categoryNotes(notes, "Ramos Arizpe");
-  const saltillo = categoryNotes(notes, "Saltillo");
-  const region = categoryNotes(notes, "Región Sureste");
-  const pool = [...coahuila, ...ramos, ...saltillo, ...region]
-    .sort((a, b) => parseDate(b.date) - parseDate(a.date));
-
-  if (!pool.length) return "";
-
-  const feature = coahuila[0] || pool[0];
-  const used = new Set([feature.slug]);
-  const stack = [];
-
-  for (const candidate of [ramos[0], saltillo[0], region[0], coahuila[1], ...pool]) {
-    if (candidate && !used.has(candidate.slug)) {
-      stack.push(candidate);
-      used.add(candidate.slug);
-    }
-    if (stack.length === 3) break;
-  }
-
-  return `<section class="container section-block" id="coahuila">
-    <div class="section-header">
-      <div><span class="section-kicker">NUESTRA REGIÓN</span><h2>Coahuila</h2></div>
-      <nav>
-        <a href="/coahuila/">Coahuila</a>
-        <a href="/ramos-arizpe/">Ramos Arizpe</a>
-        <a href="/saltillo/">Saltillo</a>
-        <a href="/region-sureste/">Región Sureste</a>
       </nav>
     </div>
-    <div class="regional-grid">
-      <article class="regional-feature">
-        ${noteLink(feature, `
-          ${imageMarkup(feature, "regional-photo", "FOTO COAHUILA")}
-          <span class="section-label">${esc(feature.category)}</span>
-          <h3>${esc(feature.title)}</h3>
-          ${feature.summary ? `<p>${esc(feature.summary)}</p>` : ""}
-        `)}
-      </article>
-      <div class="regional-stack">
-        ${stack.map((n, i) => `<article${n.category === "Ramos Arizpe" ? ' id="ramos"' : ""}>
-          ${imageMarkup(n, "thumb", "FOTO")}
-          <div>
-            <span class="section-label">${esc(n.category)}</span>
-            <h4>${noteLink(n, esc(n.title))}</h4>
-          </div>
-        </article>`).join("")}
+  </div>`;
+}
+
+function headerHtml() {
+  return `<div class="utility-bar">
+    <div class="container utility-inner">
+      <div class="utility-left"><span>${escapeHtml(currentLocalDate())}</span><span class="edition">Edición digital</span></div>
+      <div class="utility-right">
+        <a href="/quienes-somos/">Quiénes somos</a>
+        <a href="/contacto/">Contacto</a>
       </div>
     </div>
-  </section>`;
-}
-
-function renderSecuritySection(notes) {
-  const list = categoryNotes(notes, "Seguridad").slice(0, 3);
-  if (!list.length) return "";
-  const [feature, second, third] = list;
-
-  return `<section class="dark-band" id="seguridad">
-    <div class="container">
-      <div class="section-header inverted">
-        <div><span class="section-kicker">COBERTURA</span><h2>Seguridad</h2></div>
-        <a href="/seguridad/">Más noticias →</a>
-      </div>
-      <div class="dark-grid">
-        <article class="dark-feature">
-          ${noteLink(feature, `
-            ${imageMarkup(feature, "dark-photo", "FOTOGRAFÍA")}
-            <span class="section-label">${esc(feature.category)}</span>
-            <h3>${esc(feature.title)}</h3>
-            ${feature.summary ? `<p>${esc(feature.summary)}</p>` : ""}
-          `)}
-        </article>
-        ${second ? `<article class="dark-card">
-          <span class="section-label">${esc(second.category)}</span>
-          <h4>${noteLink(second, esc(second.title))}</h4>
-          ${second.summary ? `<p>${esc(second.summary)}</p>` : ""}
-        </article>` : `<article class="dark-card empty-editorial"><span>Sin más publicaciones recientes</span></article>`}
-        ${third ? `<article class="dark-card">
-          <span class="section-label">${esc(third.category)}</span>
-          <h4>${noteLink(third, esc(third.title))}</h4>
-          ${third.summary ? `<p>${esc(third.summary)}</p>` : ""}
-        </article>` : `<article class="dark-card empty-editorial"><span>Sin más publicaciones recientes</span></article>`}
-      </div>
-    </div>
-  </section>`;
-}
-
-function renderPoliticsEconomySection(notes) {
-  const politics = categoryNotes(notes, "Política").slice(0, 2);
-  const economy = categoryNotes(notes, "Economía").slice(0, 4);
-
-  if (!politics.length && !economy.length) return "";
-
-  const politicsHtml = politics.length ? `
-    <div class="split-main" id="politica">
-      <div class="section-header simple"><div><span class="section-kicker">AGENDA PÚBLICA</span><h2>Política</h2></div></div>
-      ${politics.map(n => `<article class="wide-story">
-        ${imageMarkup(n, "wide-photo", "FOTO")}
-        <div>
-          <span class="section-label">${esc(n.category)}</span>
-          <h3>${noteLink(n, esc(n.title))}</h3>
-          ${n.summary ? `<p>${esc(n.summary)}</p>` : ""}
-          <div class="byline">${esc(n.author)} <span>•</span> ${esc(formatDate(n.date))}</div>
-        </div>
-      </article>`).join("")}
-    </div>` : "";
-
-  const economyHtml = economy.length ? `
-    <aside class="split-side" id="economia">
-      <div class="section-header simple"><div><span class="section-kicker">NEGOCIOS</span><h2>Economía</h2></div></div>
-      <div class="market-bar"><div><span>DÓLAR</span><strong>$—</strong></div><div><span>IPC</span><strong>—</strong></div><div><span>WTI</span><strong>$—</strong></div></div>
-      <article class="economy-lead">
-        <span class="section-label">${esc(economy[0].category)}</span>
-        <h3>${noteLink(economy[0], esc(economy[0].title))}</h3>
-        ${economy[0].summary ? `<p>${esc(economy[0].summary)}</p>` : ""}
-      </article>
-      ${economy.length > 1 ? `<ol class="economy-list">
-        ${economy.slice(1,4).map((n, i) => `<li><span>${String(i+1).padStart(2,"0")}</span>${noteLink(n, esc(n.title))}</li>`).join("")}
-      </ol>` : ""}
-    </aside>` : "";
-
-  return `<section class="container split-sections">${politicsHtml}${economyHtml}</section>`;
-}
-
-function renderOpinionSection(notes) {
-  const list = categoryNotes(notes, "Opinión").slice(0, 3);
-  if (!list.length) return "";
-
-  return `<section class="container opinion" id="opinion">
-    <div class="section-header">
-      <div><span class="section-kicker">ANÁLISIS</span><h2>Opinión</h2></div>
-      <a href="/opinion/">Todas las opiniones →</a>
-    </div>
-    <div class="opinion-grid">
-      ${list.map((n, i) => `<article>
-        <div class="avatar">${i === 0 ? "AR" : String(i).padStart(2,"0")}</div>
-        <span>${esc(n.category)}</span>
-        <h3>${noteLink(n, esc(n.title))}</h3>
-        <p>${esc(n.author)}</p>
-      </article>`).join("")}
-    </div>
-  </section>`;
-}
-
-function renderNationalExtraSections(notes) {
-  const categories = ["México", "Estados", "Mundo"];
-  const blocks = categories.map(cat => {
-    const list = categoryNotes(notes, cat).slice(0, 4);
-    if (!list.length) return "";
-    return `<section class="container generated-category-section" id="${slugify(cat)}">
-      <div class="section-header">
-        <div><span class="section-kicker">COBERTURA</span><h2>${esc(cat)}</h2></div>
-        <a href="/${slugify(cat)}/">Más noticias →</a>
-      </div>
-      <div class="generated-news-grid">
-        ${list.map(n => `<article class="generated-news-card">
-          ${noteLink(n, `
-            ${imageMarkup(n, "generated-card-image", "FOTO")}
-            <div class="generated-card-copy">
-              <span class="section-label">${esc(n.category)}</span>
-              <h3>${esc(n.title)}</h3>
-              ${n.summary ? `<p>${esc(n.summary)}</p>` : ""}
-              <div class="byline">${esc(n.author)} <span>•</span> ${esc(formatDate(n.date))}</div>
-            </div>
-          `)}
-        </article>`).join("")}
-      </div>
-    </section>`;
-  }).filter(Boolean);
-
-  return blocks.join("");
-}
-
-function categoryArchivePage(category, notes) {
-  const list = categoryNotes(notes, category);
-  const slug = slugify(category);
-  const cards = list.map(n => `<article class="generated-news-card">
-    ${noteLink(n, `
-      ${imageMarkup(n, "generated-card-image", "FOTO")}
-      <div class="generated-card-copy">
-        <span class="section-label">${esc(n.category)}</span>
-        <h3>${esc(n.title)}</h3>
-        ${n.summary ? `<p>${esc(n.summary)}</p>` : ""}
-        <div class="byline">${esc(n.author)} <span>•</span> ${esc(formatDate(n.date))}</div>
-      </div>
-    `)}
-  </article>`).join("");
-
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${esc(category)} | Ramos Arizpe al Día</title>
-  <meta name="description" content="Noticias de ${esc(category)} en Ramos Arizpe al Día.">
-  <link rel="canonical" href="https://ramosarizpealdia.com/${slug}/">
-  <link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-  <div class="utility-bar"><div class="container utility-inner"><div class="utility-left"><span>${esc(formatDate(new Date()))}</span><span class="edition">Edición digital</span></div></div></div>
+  </div>
   <header class="masthead">
     <div class="container masthead-inner">
+      <button class="menu-toggle" aria-label="Abrir menú" aria-expanded="false"><span></span><span></span><span></span></button>
       <a class="identity" href="/" aria-label="Ramos Arizpe al Día">
         <img src="/logo-ramos-arizpe-al-dia.jpg" alt="Ramos Arizpe al Día">
         <div class="wordmark"><span class="wordmark-main">RAMOS ARIZPE</span><span class="wordmark-sub">AL DÍA</span></div>
       </a>
+      <div class="masthead-actions">
+        <a class="social" href="https://www.facebook.com/share/1CWiSRPs4B/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">Facebook</a>
+        <a class="subscribe" href="https://www.facebook.com/share/1CWiSRPs4B/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">Síguenos</a>
+      </div>
     </div>
-    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav professional-nav" aria-label="Secciones">
-<a href="/">Inicio</a>
-<a href="/mexico/">México</a>
-<a class="local" href="/coahuila/">Coahuila</a>
-<a class="local" href="/ramos-arizpe/">Ramos Arizpe</a>
-<a class="local" href="/saltillo/">Saltillo</a>
-<a href="/seguridad/">Seguridad</a>
-<a href="/politica/">Política</a>
-<a href="/economia/">Economía</a>
-<div class="nav-more">
-  <button type="button" class="nav-more-button" aria-haspopup="true">Más ▾</button>
-  <div class="nav-more-menu">
-    <a href="/region-sureste/">Región Sureste</a>
-    <a href="/estados/">Estados</a>
-    <a href="/mundo/">Mundo</a>
-    <a href="/opinion/">Opinión</a>
-  </div>
-</div>
-</nav></div></div>
-  </header>
-  <main class="container category-page">
-    <div class="section-header"><div><span class="section-kicker">SECCIÓN</span><h1>${esc(category)}</h1></div></div>
-    ${cards ? `<div class="generated-news-grid">${cards}</div>` : `<p class="empty-category">Aún no hay publicaciones en esta sección.</p>`}
-  </main>
-  <footer><div class="container footer-bottom"><span>© ${new Intl.DateTimeFormat("en", { timeZone: "America/Monterrey", year: "numeric" }).format(new Date())} Ramos Arizpe al Día</span></div></footer>
+    ${navHtml()}
+  </header>`;
+}
+
+function footerHtml() {
+  return `<footer class="site-footer">
+    <div class="container footer-top">
+      <div class="footer-brand">
+        <img src="/logo-ramos-arizpe-al-dia.jpg" alt="Ramos Arizpe al Día">
+        <div><strong>RAMOS ARIZPE AL DÍA</strong><span>Información de Ramos Arizpe, Saltillo y Coahuila</span></div>
+      </div>
+      <nav class="footer-links">
+        <a href="/quienes-somos/">Quiénes somos</a>
+        <a href="/politica-editorial/">Política editorial</a>
+        <a href="/contacto/">Contacto</a>
+        <a href="/aviso-de-privacidad/">Aviso de privacidad</a>
+      </nav>
+    </div>
+    <div class="container footer-bottom">© ${new Intl.DateTimeFormat("en", { timeZone: TIME_ZONE, year: "numeric" }).format(new Date())} Ramos Arizpe al Día</div>
+  </footer>`;
+}
+
+function documentHtml({ title, description, canonical, body, extraHead = "" }) {
+  return `<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  <link rel="canonical" href="${escapeHtml(canonical)}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${escapeHtml(canonical)}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700;8..60,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  ${extraHead}
+  <script defer src="/script.js"></script>
+</head>
+<body>
+${headerHtml()}
+${body}
+${footerHtml()}
 </body>
 </html>`;
 }
 
+function tickerHtml(notes) {
+  const latest = notes.slice(0, 3);
+  if (!latest.length) return "";
+  return `<section class="ticker">
+    <div class="container ticker-inner">
+      <span class="ticker-label">AL MOMENTO</span>
+      ${latest.map(note => `<a href="${articleUrl(note)}">${escapeHtml(note.title)}</a>`).join('<span class="ticker-sep">•</span>')}
+    </div>
+  </section>`;
+}
+
+function leadHtml(notes) {
+  if (!notes.length) return `<section class="container empty-home"><h1>Ramos Arizpe al Día</h1><p>Aún no hay noticias publicadas.</p></section>`;
+
+  const featured = notes.find(note => note.featured) || notes[0];
+  const remaining = notes.filter(note => note !== featured);
+  const second = remaining[0];
+  const third = remaining[1];
+  const minute = notes.slice(0, 5);
+
+  return `<section class="container lead-grid">
+    <article class="lead-story">
+      <a href="${articleUrl(featured)}">
+        ${img(featured, "lead-photo", "FOTOGRAFÍA PRINCIPAL")}
+        <div class="lead-content">
+          <span class="section-label">${escapeHtml(featured.category)}</span>
+          <h1>${escapeHtml(featured.title)}</h1>
+          ${featured.summary ? `<p>${escapeHtml(featured.summary)}</p>` : ""}
+          <div class="byline">Por ${escapeHtml(featured.author)} <span>•</span> ${escapeHtml(formatDate(featured.published, true))}</div>
+        </div>
+      </a>
+    </article>
+
+    <div class="lead-secondary">
+      ${second ? `<article class="secondary-story">
+        <a href="${articleUrl(second)}">
+          ${img(second, "secondary-photo", "FOTO")}
+          <span class="section-label">${escapeHtml(second.category)}</span>
+          <h2>${escapeHtml(second.title)}</h2>
+          <div class="byline">${escapeHtml(second.author)} <span>•</span> ${escapeHtml(formatDate(second.published, true))}</div>
+        </a>
+      </article>` : ""}
+      ${third ? `<article class="secondary-story text-only">
+        <a href="${articleUrl(third)}">
+          <span class="section-label">${escapeHtml(third.category)}</span>
+          <h2>${escapeHtml(third.title)}</h2>
+          ${third.summary ? `<p>${escapeHtml(third.summary)}</p>` : ""}
+          <div class="byline">${escapeHtml(third.author)} <span>•</span> ${escapeHtml(formatDate(third.published, true))}</div>
+        </a>
+      </article>` : ""}
+    </div>
+
+    <aside class="minute-column">
+      <div class="minute-title"><span>AL MINUTO</span><a href="/ultimas/">Ver todo</a></div>
+      ${minute.map(note => `<article>
+        <time>${escapeHtml(formatTime(note.published))}</time>
+        <div><span>${escapeHtml(note.category)}</span><h3><a href="${articleUrl(note)}">${escapeHtml(note.title)}</a></h3></div>
+      </article>`).join("")}
+    </aside>
+  </section>`;
+}
+
+function latestHtml(notes) {
+  if (!notes.length) return "";
+  return `<section class="container section-block">
+    <div class="section-header"><div><span class="section-kicker">ACTUALIDAD</span><h2>Últimas noticias</h2></div><a href="/ultimas/">Ver todas →</a></div>
+    <div class="news-grid">
+      ${notes.slice(0, 9).map(note => `<article class="news-card">
+        <a href="${articleUrl(note)}">
+          ${img(note, "card-image", "FOTO")}
+          <span class="section-label">${escapeHtml(note.category)}</span>
+          <h3>${escapeHtml(note.title)}</h3>
+          ${note.summary ? `<p>${escapeHtml(note.summary)}</p>` : ""}
+          <div class="byline">${escapeHtml(note.author)} <span>•</span> ${escapeHtml(formatDate(note.published))}</div>
+        </a>
+      </article>`).join("")}
+    </div>
+  </section>`;
+}
+
+function regionalHtml(notes) {
+  const pool = notes.filter(note => ["Coahuila", "Ramos Arizpe", "Saltillo", "Región Sureste"].some(c => noteInSection(note, c)));
+  if (!pool.length) return "";
+
+  const feature = pool[0];
+  const side = pool.slice(1, 4);
+
+  return `<section class="container section-block">
+    <div class="section-header">
+      <div><span class="section-kicker">NUESTRA REGIÓN</span><h2>Coahuila</h2></div>
+      <nav><a href="/coahuila/">Coahuila</a><a href="/ramos-arizpe/">Ramos Arizpe</a><a href="/saltillo/">Saltillo</a><a href="/region-sureste/">Región Sureste</a></nav>
+    </div>
+    <div class="regional-grid">
+      <article class="regional-feature">
+        <a href="${articleUrl(feature)}">
+          ${img(feature, "regional-photo", "FOTO COAHUILA")}
+          <span class="section-label">${escapeHtml(feature.category)}</span>
+          <h3>${escapeHtml(feature.title)}</h3>
+          ${feature.summary ? `<p>${escapeHtml(feature.summary)}</p>` : ""}
+        </a>
+      </article>
+      <div class="regional-stack">
+        ${side.length ? side.map(note => `<article>
+          <a class="stack-image" href="${articleUrl(note)}">${img(note, "thumb", "FOTO")}</a>
+          <div><span class="section-label">${escapeHtml(note.category)}</span><h4><a href="${articleUrl(note)}">${escapeHtml(note.title)}</a></h4></div>
+        </article>`).join("") : `<div class="section-empty">Más información regional aparecerá aquí conforme se publique.</div>`}
+      </div>
+    </div>
+  </section>`;
+}
+
+function securityHtml(notes) {
+  const list = notesFor(notes, "Seguridad").slice(0, 3);
+  if (!list.length) return "";
+  const [feature, ...side] = list;
+
+  return `<section class="dark-band">
+    <div class="container">
+      <div class="section-header inverted"><div><span class="section-kicker">COBERTURA</span><h2>Seguridad</h2></div><a href="/seguridad/">Más noticias →</a></div>
+      <div class="dark-grid">
+        <article class="dark-feature">
+          <a href="${articleUrl(feature)}">
+            ${img(feature, "dark-photo", "FOTOGRAFÍA")}
+            <span class="section-label">${escapeHtml(feature.category)}</span>
+            <h3>${escapeHtml(feature.title)}</h3>
+            ${feature.summary ? `<p>${escapeHtml(feature.summary)}</p>` : ""}
+          </a>
+        </article>
+        ${side.map(note => `<article class="dark-card"><span class="section-label">${escapeHtml(note.category)}</span><h4><a href="${articleUrl(note)}">${escapeHtml(note.title)}</a></h4>${note.summary ? `<p>${escapeHtml(note.summary)}</p>` : ""}</article>`).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+
+function thematicHtml(notes) {
+  const blocks = [];
+  for (const category of ["Política", "Economía", "México", "Estados", "Mundo", "Opinión"]) {
+    const list = notesFor(notes, category).slice(0, 4);
+    if (!list.length) continue;
+
+    blocks.push(`<section class="container section-block">
+      <div class="section-header"><div><span class="section-kicker">SECCIÓN</span><h2>${escapeHtml(category)}</h2></div><a href="/${slugify(category)}/">Más noticias →</a></div>
+      <div class="news-grid">
+        ${list.map(note => `<article class="news-card">
+          <a href="${articleUrl(note)}">
+            ${img(note, "card-image", "FOTO")}
+            <span class="section-label">${escapeHtml(note.category)}</span>
+            <h3>${escapeHtml(note.title)}</h3>
+            ${note.summary ? `<p>${escapeHtml(note.summary)}</p>` : ""}
+          </a>
+        </article>`).join("")}
+      </div>
+    </section>`);
+  }
+  return blocks.join("");
+}
+
+function homepage(notes) {
+  const main = `<main>
+    ${tickerHtml(notes)}
+    ${leadHtml(notes)}
+    <div class="container rule"></div>
+    ${latestHtml(notes)}
+    ${regionalHtml(notes)}
+    ${securityHtml(notes)}
+    ${thematicHtml(notes)}
+  </main>`;
+
+  return documentHtml({
+    title: "Ramos Arizpe al Día | Noticias de Ramos Arizpe, Saltillo y Coahuila",
+    description: "Noticias de Ramos Arizpe, Saltillo, Coahuila, México, seguridad, política y economía.",
+    canonical: `${SITE_URL}/`,
+    body: main
+  });
+}
+
+function categoryPage(category, notes) {
+  const list = notesFor(notes, category);
+  const cards = list.length ? list.map(note => `<article class="archive-card">
+      <a href="${articleUrl(note)}">${img(note, "archive-image", "FOTO")}</a>
+      <div>
+        <span class="section-label">${escapeHtml(note.category)}</span>
+        <h2><a href="${articleUrl(note)}">${escapeHtml(note.title)}</a></h2>
+        ${note.summary ? `<p>${escapeHtml(note.summary)}</p>` : ""}
+        <div class="byline">Por ${escapeHtml(note.author)} <span>•</span> ${escapeHtml(formatDate(note.published, true))}</div>
+      </div>
+    </article>`).join("") : `<p class="section-empty">Aún no hay publicaciones en esta sección.</p>`;
+
+  return documentHtml({
+    title: `${category} | Ramos Arizpe al Día`,
+    description: `Noticias de ${category} publicadas por Ramos Arizpe al Día.`,
+    canonical: `${SITE_URL}/${slugify(category)}/`,
+    body: `<main class="container archive-page">
+      <div class="page-heading"><span class="section-kicker">SECCIÓN</span><h1>${escapeHtml(category)}</h1></div>
+      <div class="archive-list">${cards}</div>
+    </main>`
+  });
+}
+
 function articlePage(note) {
-  const canonical = `https://ramosarizpealdia.com${articleURL(note)}`;
-  const image = note.image ? `https://ramosarizpealdia.com${note.image.startsWith("/") ? note.image : "/" + note.image}` : "https://ramosarizpealdia.com/logo-ramos-arizpe-al-dia.jpg";
-  const bodyHtml = marked.parse(note.body || "");
-  const published = parseDate(note.date).toISOString();
+  const canonical = `${SITE_URL}${articleUrl(note)}`;
+  const imageUrl = note.image
+    ? `${SITE_URL}${note.image.startsWith("/") ? note.image : `/${note.image}`}`
+    : `${SITE_URL}/logo-ramos-arizpe-al-dia.jpg`;
 
   const schema = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
-    "headline": note.title,
-    "description": note.summary || "",
-    "datePublished": published,
-    "dateModified": published,
-    "mainEntityOfPage": canonical,
-    "image": [image],
-    "author": { "@type": "Person", "name": note.author },
-    "publisher": {
+    headline: note.title,
+    description: note.summary || note.title,
+    datePublished: note.published.toISOString(),
+    dateModified: note.published.toISOString(),
+    mainEntityOfPage: canonical,
+    image: [imageUrl],
+    author: { "@type": "Person", name: note.author },
+    publisher: {
       "@type": "Organization",
-      "name": "Ramos Arizpe al Día",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://ramosarizpealdia.com/logo-ramos-arizpe-al-dia.jpg"
-      }
+      name: "Ramos Arizpe al Día",
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/logo-ramos-arizpe-al-dia.jpg` }
     }
   };
 
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${esc(note.title)} | Ramos Arizpe al Día</title>
-  <meta name="description" content="${esc(note.summary || note.title)}">
-  <link rel="canonical" href="${canonical}">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="${esc(note.title)}">
-  <meta property="og:description" content="${esc(note.summary || "")}">
-  <meta property="og:url" content="${canonical}">
-  <meta property="og:image" content="${image}">
-  <meta property="article:published_time" content="${published}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Franklin:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700;8..60,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <script type="application/ld+json">${JSON.stringify(schema)}</script>
-</head>
-<body>
-  <div class="utility-bar"><div class="container utility-inner"><div class="utility-left"><span>${esc(formatDate(new Date()))}</span><span class="edition">Edición digital</span></div><div class="utility-right"><a href="/">Inicio</a></div></div></div>
-  <header class="masthead">
-    <div class="container masthead-inner">
-      <a class="identity" href="/" aria-label="Ramos Arizpe al Día">
-        <img src="/logo-ramos-arizpe-al-dia.jpg" alt="Logo de Ramos Arizpe al Día">
-        <div class="wordmark"><span class="wordmark-main">RAMOS ARIZPE</span><span class="wordmark-sub">AL DÍA</span></div>
-      </a>
-    </div>
-    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav professional-nav" aria-label="Secciones">
-<a href="/">Inicio</a>
-<a href="/mexico/">México</a>
-<a class="local" href="/coahuila/">Coahuila</a>
-<a class="local" href="/ramos-arizpe/">Ramos Arizpe</a>
-<a class="local" href="/saltillo/">Saltillo</a>
-<a href="/seguridad/">Seguridad</a>
-<a href="/politica/">Política</a>
-<a href="/economia/">Economía</a>
-<div class="nav-more">
-  <button type="button" class="nav-more-button" aria-haspopup="true">Más ▾</button>
-  <div class="nav-more-menu">
-    <a href="/region-sureste/">Región Sureste</a>
-    <a href="/estados/">Estados</a>
-    <a href="/mundo/">Mundo</a>
-    <a href="/opinion/">Opinión</a>
-  </div>
-</div>
-</nav></div></div>
-  </header>
-  <main>
-    <article class="container article-page">
-      <div class="article-breadcrumb"><a href="/">Inicio</a> / <a href="/${slugify(note.category)}/">${esc(note.category)}</a></div>
-      <div class="article-sections">
-        ${(note.sections || [note.category]).map(section => `<a class="section-label" href="/${slugify(section)}/">${esc(section)}</a>`).join(" ")}
+  return documentHtml({
+    title: `${note.title} | Ramos Arizpe al Día`,
+    description: note.summary || note.title,
+    canonical,
+    extraHead: `<meta property="og:type" content="article">
+  <meta property="og:image" content="${escapeHtml(imageUrl)}">
+  <meta property="article:published_time" content="${escapeHtml(note.published.toISOString())}">
+  <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`,
+    body: `<main>
+      <article class="container article-page">
+        <div class="breadcrumb"><a href="/">Inicio</a> / <a href="/${slugify(note.category)}/">${escapeHtml(note.category)}</a></div>
+        <div class="article-sections">${note.sections.map(section => `<a href="/${slugify(section)}/">${escapeHtml(section)}</a>`).join("")}</div>
+        <h1>${escapeHtml(note.title)}</h1>
+        ${note.summary ? `<p class="article-deck">${escapeHtml(note.summary)}</p>` : ""}
+        <div class="article-meta">Por <strong>${escapeHtml(note.author)}</strong> · ${escapeHtml(formatDate(note.published, true))}</div>
+        ${note.image ? `<img class="article-hero" src="${escapeHtml(note.image)}" alt="${escapeHtml(note.title)}">` : ""}
+        <div class="article-body">${renderMarkdown(note.body)}</div>
+      </article>
+    </main>`
+  });
+}
+
+function latestPage(notes) {
+  return documentHtml({
+    title: "Últimas noticias | Ramos Arizpe al Día",
+    description: "Las publicaciones más recientes de Ramos Arizpe al Día.",
+    canonical: `${SITE_URL}/ultimas/`,
+    body: `<main class="container archive-page">
+      <div class="page-heading"><span class="section-kicker">ACTUALIDAD</span><h1>Últimas noticias</h1></div>
+      <div class="archive-list">
+        ${notes.map(note => `<article class="archive-card">
+          <a href="${articleUrl(note)}">${img(note, "archive-image", "FOTO")}</a>
+          <div><span class="section-label">${escapeHtml(note.category)}</span><h2><a href="${articleUrl(note)}">${escapeHtml(note.title)}</a></h2>${note.summary ? `<p>${escapeHtml(note.summary)}</p>` : ""}<div class="byline">${escapeHtml(formatDate(note.published, true))}</div></div>
+        </article>`).join("")}
       </div>
-      <h1>${esc(note.title)}</h1>
-      ${note.summary ? `<p class="article-deck">${esc(note.summary)}</p>` : ""}
-      <div class="article-meta">Por <strong>${esc(note.author)}</strong> · Publicado ${esc(formatDate(note.date, true))}</div>
-      ${note.image ? `<img class="article-hero-image" src="${esc(note.image)}" alt="${esc(note.title)}">` : ""}
-      <div class="article-body">${bodyHtml}</div>
-    </article>
-  </main>
-  <footer>
-    <div class="container footer-top"><div class="footer-brand"><img src="/logo-ramos-arizpe-al-dia.jpg" alt="Ramos Arizpe al Día"><div><strong>RAMOS ARIZPE AL DÍA</strong><span>Información de México y Coahuila</span></div></div></div>
-    <div class="container footer-bottom"><span>© ${new Intl.DateTimeFormat("en", { timeZone: "America/Monterrey", year: "numeric" }).format(new Date())} Ramos Arizpe al Día</span></div>
-  </footer>
-</body>
-</html>`;
+    </main>`
+  });
+}
+
+function simplePage(slug, title, bodyHtml, description = title) {
+  return documentHtml({
+    title: `${title} | Ramos Arizpe al Día`,
+    description,
+    canonical: `${SITE_URL}/${slug}/`,
+    body: `<main class="container institutional-page"><h1>${escapeHtml(title)}</h1>${bodyHtml}</main>`
+  });
+}
+
+function writeFile(relativePath, content) {
+  const target = path.join(DIST, relativePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, content);
+}
+
+function copyFileIfExists(name) {
+  const source = path.join(ROOT, name);
+  if (!fs.existsSync(source)) return;
+  const target = path.join(DIST, name);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(source, target);
+}
+
+function copyDirIfExists(name) {
+  const source = path.join(ROOT, name);
+  if (!fs.existsSync(source)) return;
+  fs.cpSync(source, path.join(DIST, name), { recursive: true });
 }
 
 function buildSitemaps(notes) {
-  const categoryUrls = ["México","Coahuila","Ramos Arizpe","Saltillo","Región Sureste","Política","Seguridad","Economía","Estados","Mundo","Opinión"]
-    .map(category => `<url><loc>https://ramosarizpealdia.com/${slugify(category)}/</loc></url>`);
-  const urls = [
-    `<url><loc>https://ramosarizpealdia.com/</loc></url>`,
-    ...categoryUrls,
-    ...notes.map(n => `<url><loc>https://ramosarizpealdia.com${articleURL(n)}</loc><lastmod>${parseDate(n.date).toISOString()}</lastmod></url>`)
+  const staticUrls = [
+    "/",
+    "/ultimas/",
+    "/quienes-somos/",
+    "/contacto/",
+    "/politica-editorial/",
+    "/aviso-de-privacidad/",
+    ...CATEGORIES.map(category => `/${slugify(category)}/`)
   ];
-  fs.writeFileSync(path.join(dist, "sitemap.xml"),
-    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`
-  );
 
-  const cutoff = Date.now() - 2 * 24 * 60 * 60 * 1000;
-  const recent = notes.filter(n => parseDate(n.date).getTime() >= cutoff);
-  const news = recent.map(n => `<url>
-    <loc>https://ramosarizpealdia.com${articleURL(n)}</loc>
-    <news:news>
-      <news:publication><news:name>Ramos Arizpe al Día</news:name><news:language>es</news:language></news:publication>
-      <news:publication_date>${parseDate(n.date).toISOString()}</news:publication_date>
-      <news:title>${esc(n.title)}</news:title>
-    </news:news>
-  </url>`);
-  fs.writeFileSync(path.join(dist, "news-sitemap.xml"),
-    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">${news.join("")}</urlset>`
-  );
-  fs.writeFileSync(path.join(dist, "robots.txt"),
-    `User-agent: *\nAllow: /\nSitemap: https://ramosarizpealdia.com/sitemap.xml\nSitemap: https://ramosarizpealdia.com/news-sitemap.xml\n`
-  );
+  const urls = [
+    ...staticUrls.map(url => `<url><loc>${SITE_URL}${url}</loc></url>`),
+    ...notes.map(note => `<url><loc>${SITE_URL}${articleUrl(note)}</loc><lastmod>${note.published.toISOString()}</lastmod></url>`)
+  ];
+
+  writeFile("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`);
+
+  const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+  const recent = notes.filter(note => note.published.getTime() >= cutoff);
+  const newsUrls = recent.map(note => `<url>
+  <loc>${SITE_URL}${articleUrl(note)}</loc>
+  <news:news>
+    <news:publication><news:name>Ramos Arizpe al Día</news:name><news:language>es</news:language></news:publication>
+    <news:publication_date>${note.published.toISOString()}</news:publication_date>
+    <news:title>${escapeXml(note.title)}</news:title>
+  </news:news>
+</url>`);
+
+  writeFile("news-sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">${newsUrls.join("")}</urlset>`);
+
+  writeFile("robots.txt", `User-agent: *
+Allow: /
+Disallow: /admin/
+Sitemap: ${SITE_URL}/sitemap.xml
+Sitemap: ${SITE_URL}/news-sitemap.xml
+`);
 }
 
-fs.rmSync(dist, { recursive: true, force: true });
-fs.mkdirSync(dist, { recursive: true });
-
-["styles.css", "script.js", "logo-ramos-arizpe-al-dia.jpg"].forEach(copyFile);
-["admin", "uploads"].forEach(copyDir);
-
-const notes = loadNotes();
-
-// Validar todas las fechas antes de generar cualquier archivo.
-// Si una nota tiene una fecha incorrecta, el build se detiene en vez de publicar una fecha inventada.
-for (const note of notes) {
-  parseDate(note.date);
-}
-
-console.log(`Noticias detectadas en content/noticias: ${notes.length}`);
-for (const n of notes) {
-  console.log(`- ${n.category}: ${n.title}`);
-}
-console.log("Conteo por sección:", {
-  Seguridad: categoryNotes(notes, "Seguridad").length,
-  Coahuila: categoryNotes(notes, "Coahuila").length,
-  "Ramos Arizpe": categoryNotes(notes, "Ramos Arizpe").length,
-  Saltillo: categoryNotes(notes, "Saltillo").length,
-  Política: categoryNotes(notes, "Política").length,
-  Economía: categoryNotes(notes, "Economía").length,
-  Opinión: categoryNotes(notes, "Opinión").length
-});
-let home = fs.readFileSync(path.join(root, "index.html"), "utf8");
-
-// ESTRATEGIA NUEVA:
-// Ya no intentamos borrar/reemplazar uno por uno los módulos de demostración del index.html.
-// Conservamos el encabezado y pie originales, pero reconstruimos TODO <main> desde las noticias reales.
-// Así ningún texto ficticio puede sobrevivir por diferencias de HTML.
-
-const professionalNav = `<div class="nav-shell"><div class="container nav-inner"><nav class="main-nav professional-nav" aria-label="Secciones">
-<a href="/">Inicio</a>
-<a href="/mexico/">México</a>
-<a class="local" href="/coahuila/">Coahuila</a>
-<a class="local" href="/ramos-arizpe/">Ramos Arizpe</a>
-<a class="local" href="/saltillo/">Saltillo</a>
-<a href="/seguridad/">Seguridad</a>
-<a href="/politica/">Política</a>
-<a href="/economia/">Economía</a>
-<div class="nav-more">
-  <button type="button" class="nav-more-button" aria-haspopup="true">Más ▾</button>
-  <div class="nav-more-menu">
-    <a href="/region-sureste/">Región Sureste</a>
-    <a href="/estados/">Estados</a>
-    <a href="/mundo/">Mundo</a>
-    <a href="/opinion/">Opinión</a>
-  </div>
-</div>
-</nav></div></div>`;
-
-home = home.replace(
-  /<div class="nav-shell">[\s\S]*?<nav class="main-nav"[\s\S]*?<\/nav>[\s\S]*?<\/div><\/div>/,
-  professionalNav
-);
-
-const lead = renderLead(notes);
-const latest = renderLatest(notes);
-const coahuilaSection = renderCoahuilaSection(notes);
-const securitySection = renderSecuritySection(notes);
-const politicsEconomySection = renderPoliticsEconomySection(notes);
-const opinionSection = renderOpinionSection(notes);
-const nationalExtras = renderNationalExtraSections(notes);
-
-const tickerNotes = notes.slice(0, 3);
-const tickerText = tickerNotes.length
-  ? tickerNotes.map(n => esc(n.title)).join(" • ")
-  : "Información de Ramos Arizpe, Saltillo, Coahuila y México.";
-
-const liveTicker = `<section class="ticker">
-  <div class="container ticker-inner">
-    <span class="ticker-label">AL MOMENTO</span>
-    <strong>Últimas noticias</strong>
-    <span class="ticker-sep">•</span>
-    <span>${tickerText}</span>
-  </div>
-</section>`;
-
-const newsletter = `<section class="newsletter">
-  <div class="container newsletter-inner">
-    <div>
-      <span class="section-kicker">INFORMACIÓN DIRECTA</span>
-      <h2>Las noticias importantes, en un solo lugar</h2>
-      <p>Sigue la información de Ramos Arizpe al Día y mantente al tanto de las noticias más relevantes.</p>
-    </div>
-    <a class="subscribe" href="https://www.facebook.com/share/1CWiSRPs4B/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">Síguenos en Facebook</a>
-  </div>
-</section>`;
-
-const mainParts = [
-  liveTicker,
-  lead || "",
-  lead ? '<div class="container rule"></div>' : "",
-  latest,
-  coahuilaSection,
-  securitySection,
-  politicsEconomySection,
-  nationalExtras,
-  opinionSection,
-  newsletter
-].filter(Boolean);
-
-const cleanMain = `<main>
-${mainParts.join("\n")}
-</main>`;
-
-const mainStart = home.indexOf("<main>");
-const mainEnd = home.indexOf("</main>", mainStart);
-
-if (mainStart === -1 || mainEnd === -1) {
-  throw new Error("No se pudo localizar <main> en index.html.");
-}
-
-home = home.slice(0, mainStart) + cleanMain + home.slice(mainEnd + "</main>".length);
-
-// Validación simple y útil: comprueba que las noticias reales sí quedaron en la portada.
-if (notes.length) {
-  const featuredForHome = notes.find(n => n.featured) || notes[0];
-  if (!home.includes(esc(featuredForHome.title))) {
-    throw new Error("La noticia principal real no quedó insertada en la portada.");
+function validateOutput(notes) {
+  const home = fs.readFileSync(path.join(DIST, "index.html"), "utf8");
+  const forbidden = [
+    "El titular principal del día abre la agenda informativa",
+    "La cobertura política se presenta con jerarquía editorial",
+    "Industria, inversiones y negocios con especial atención"
+  ];
+  for (const phrase of forbidden) {
+    if (home.includes(phrase)) throw new Error(`Se detectó contenido de demostración: ${phrase}`);
+  }
+  for (const note of notes.slice(0, Math.min(notes.length, 2))) {
+    if (!home.includes(escapeHtml(note.title))) throw new Error(`La portada no contiene la nota real: ${note.title}`);
   }
 }
 
-// Ya no validamos textos demo: al reconstruir TODO <main>, esos textos ni siquiera entran al dist.
-console.log("Portada reconstruida desde cero con contenido real.");
-console.log(`Noticias reales integradas: ${notes.length}.`);
-for (const n of notes) {
-  const fixed = parseDate(n.date);
-  console.log(`Fecha fija: ${n.title} -> ${new Intl.DateTimeFormat("es-MX", {
-    timeZone: "America/Monterrey",
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(fixed)}`);
-}
-console.log("Fechas editoriales verificadas en America/Monterrey; ninguna fecha usa la hora del build.");
+function main() {
+  console.log("RAMOS ARIZPE AL DÍA — BUILD LIMPIO v1");
 
-fs.writeFileSync(path.join(dist, "index.html"), home);
+  fs.rmSync(DIST, { recursive: true, force: true });
+  fs.mkdirSync(DIST, { recursive: true });
 
-const extraCss = `
-/* Contenido generado automáticamente desde /admin */
-.ticker-inner>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.newsletter .subscribe{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+  const notes = readNotes();
+  console.log(`Noticias leídas: ${notes.length}`);
+  for (const note of notes) {
+    console.log(`- ${formatDate(note.published, true)} | ${note.category} | ${note.title}`);
+  }
 
-.lead-story>a,.secondary-story>a,.generated-news-card>a{color:inherit;text-decoration:none;display:block}
-.article-cover{width:100%;object-fit:cover;display:block}
-.generated-latest{padding-top:24px;padding-bottom:55px}
-.generated-news-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
-.generated-news-card{border-top:1px solid #d7d7d7;padding-top:14px}
-.generated-card-image{width:100%;aspect-ratio:16/9;object-fit:cover;margin-bottom:14px}
-.generated-card-copy h3{font-family:"Source Serif 4",Georgia,serif;font-size:25px;line-height:1.08;margin:7px 0}
-.generated-card-copy p{color:#626262;line-height:1.45}
-.article-page{max-width:860px;padding-top:50px;padding-bottom:80px}
-.article-breadcrumb{font-size:13px;color:#6c6c6c;margin-bottom:24px}
-.article-sections{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px}
-.article-sections .section-label{display:inline-block;text-decoration:none}
-.professional-nav{display:flex;align-items:center;justify-content:center;gap:27px;overflow:visible}
-.professional-nav .nav-more{position:relative;display:flex;align-items:stretch}
-.professional-nav .nav-more-button{appearance:none;border:0;border-bottom:3px solid transparent;background:transparent;color:inherit;font:inherit;font-weight:inherit;text-transform:uppercase;letter-spacing:.25px;padding:15px 0 12px;cursor:pointer;height:100%}
-.professional-nav .nav-more-menu{display:none;position:absolute;top:100%;right:0;min-width:190px;background:#fff;border:1px solid #e3e3e3;box-shadow:0 10px 24px rgba(0,0,0,.12);z-index:50}
-.professional-nav .nav-more-menu a{display:block;white-space:nowrap;padding:12px 16px;color:#111;background:#fff}
-.professional-nav .nav-more-menu a:hover{background:#f4f4f4}
-.professional-nav .nav-more:hover .nav-more-menu,
-.professional-nav .nav-more:focus-within .nav-more-menu{display:block}
-@media(max-width:900px){
-  .professional-nav{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch}
-  .professional-nav>a,.professional-nav .nav-more{flex:0 0 auto}
-  .professional-nav .nav-more-menu{position:fixed;top:auto;right:12px}
-}
-.article-page h1{font-family:"Source Serif 4",Georgia,serif;font-size:clamp(38px,6vw,68px);line-height:1.02;letter-spacing:-1.5px;margin:10px 0 16px}
-.article-deck{font-family:"Source Serif 4",Georgia,serif;font-size:23px;line-height:1.35;color:#555}
-.article-meta{font-size:14px;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:14px 0;margin:25px 0}
-.article-hero-image{width:100%;height:auto;margin:25px 0}
-.article-body{font-family:"Source Serif 4",Georgia,serif;font-size:20px;line-height:1.72}
-.article-body p{margin:0 0 1.3em}
-.article-body h2,.article-body h3{font-family:"Libre Franklin",Arial,sans-serif;line-height:1.15;margin-top:1.8em}
-.article-body img{max-width:100%;height:auto}
-.regional-feature>a,.dark-feature>a,.dark-card a,.wide-story a,.economy-lead a,.economy-list a,.opinion-grid a{color:inherit;text-decoration:none}
-.regional-feature>a{display:block}
-.regional-stack article .thumb{overflow:hidden}
-.regional-stack article .thumb.article-cover{object-fit:cover}
-.dark-feature .article-cover,.wide-story .article-cover{object-fit:cover}
-.dark-card.empty-editorial{display:flex;align-items:center;justify-content:center;min-height:140px;opacity:.55}
-/* Protección puntual para textos largos sin modificar la retícula original */
-.lead-story,.lead-secondary,.minute-column,.regional-feature,.regional-stack,.dark-feature,.dark-card,.split-main,.split-side{min-width:0}
-.lead-story h1,.secondary-story h2,.minute-column h3,.regional-feature h3,.regional-stack h4,.dark-feature h3,.dark-card h4,.wide-story h3,.economy-lead h3{overflow-wrap:anywhere;word-break:normal}
-.dark-feature>a{display:block}
-.newsletter{clear:both;position:relative}
+  copyFileIfExists("styles.css");
+  copyFileIfExists("script.js");
+  copyFileIfExists("logo-ramos-arizpe-al-dia.jpg");
+  copyDirIfExists("uploads");
+  copyDirIfExists("admin");
 
+  writeFile("index.html", homepage(notes));
+  writeFile("ultimas/index.html", latestPage(notes));
 
-.generated-category-section{padding-top:38px;padding-bottom:48px;border-top:1px solid #e3e3e3}
-.category-page{padding-top:48px;padding-bottom:80px}
-.category-page .section-header h1{font-family:"Source Serif 4",Georgia,serif;font-size:48px;margin:0}
-.empty-category{padding:40px 0;color:#666}
-@media(max-width:800px){
-  .generated-news-grid{grid-template-columns:1fr}
-  .article-page{padding-top:28px}
-  .article-page h1{font-size:42px}
-  .article-deck{font-size:20px}
-  .article-body{font-size:19px}
-}
-`;
-const cssPath = path.join(dist, "styles.css");
-fs.appendFileSync(cssPath, "\n" + extraCss);
+  for (const category of CATEGORIES) {
+    writeFile(`${slugify(category)}/index.html`, categoryPage(category, notes));
+  }
 
-for (const note of notes) {
-  const pageDir = path.join(dist, slugify(note.category || "noticias"), note.slug);
-  fs.mkdirSync(pageDir, { recursive: true });
-  fs.writeFileSync(path.join(pageDir, "index.html"), articlePage(note));
+  for (const note of notes) {
+    writeFile(`${slugify(note.category)}/${note.slug}/index.html`, articlePage(note));
+  }
+
+  writeFile("quienes-somos/index.html", simplePage(
+    "quienes-somos",
+    "Quiénes somos",
+    `<p>Ramos Arizpe al Día es un medio digital enfocado en informar sobre los acontecimientos de Ramos Arizpe, Saltillo, Coahuila y temas de interés general para sus lectores.</p>
+     <p>Nuestro trabajo editorial busca presentar información clara, verificable y de interés público.</p>`,
+    "Conoce a Ramos Arizpe al Día y su trabajo informativo."
+  ));
+
+  writeFile("contacto/index.html", simplePage(
+    "contacto",
+    "Contacto",
+    `<p>Para información y contacto con Ramos Arizpe al Día, consulta nuestros canales oficiales.</p>
+     <p><a class="button-link" href="https://www.facebook.com/share/1CWiSRPs4B/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">Facebook de Ramos Arizpe al Día</a></p>`,
+    "Canales de contacto de Ramos Arizpe al Día."
+  ));
+
+  writeFile("politica-editorial/index.html", simplePage(
+    "politica-editorial",
+    "Política editorial",
+    `<p>Ramos Arizpe al Día procura publicar información de interés público con enfoque periodístico, lenguaje neutral y verificación de los datos disponibles.</p>
+     <p>Cuando una información se encuentra en desarrollo, puede ser actualizada conforme existan nuevos datos confirmados.</p>`,
+    "Principios editoriales de Ramos Arizpe al Día."
+  ));
+
+  writeFile("aviso-de-privacidad/index.html", simplePage(
+    "aviso-de-privacidad",
+    "Aviso de privacidad",
+    `<p>Este sitio puede utilizar servicios técnicos necesarios para su funcionamiento. Los datos enviados voluntariamente a través de servicios externos se rigen también por las políticas de dichos proveedores.</p>
+     <p>Esta página podrá actualizarse conforme se incorporen nuevas funciones al portal.</p>`,
+    "Aviso de privacidad de Ramos Arizpe al Día."
+  ));
+
+  buildSitemaps(notes);
+  validateOutput(notes);
+
+  console.log("OK: portada generada solo con contenido real.");
+  console.log("OK: fechas de las notas permanecen fijas.");
+  console.log("OK: secciones, artículos, sitemap y news-sitemap generados.");
 }
 
-// Genera una página de archivo para cada categoría usada en el CMS.
-const allCategories = ["México","Coahuila","Ramos Arizpe","Saltillo","Región Sureste","Política","Seguridad","Economía","Estados","Mundo","Opinión"];
-for (const category of allCategories) {
-  const categoryDir = path.join(dist, slugify(category));
-  fs.mkdirSync(categoryDir, { recursive: true });
-  fs.writeFileSync(path.join(categoryDir, "index.html"), categoryArchivePage(category, notes));
-}
-
-buildSitemaps(notes);
-console.log(`Sitio generado con ${notes.length} noticia(s) y secciones automáticas.`);
+main();
