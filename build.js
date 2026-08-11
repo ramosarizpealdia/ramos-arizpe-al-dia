@@ -408,6 +408,7 @@ function categoryArchivePage(category, notes) {
         <div class="wordmark"><span class="wordmark-main">RAMOS ARIZPE</span><span class="wordmark-sub">AL DÍA</span></div>
       </a>
     </div>
+    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav" aria-label="Secciones"><a href="/">Inicio</a><a href="/mexico/">México</a><a href="/politica/">Política</a><a href="/economia/">Economía</a><a href="/seguridad/">Seguridad</a><a href="/estados/">Estados</a><a href="/mundo/">Mundo</a><a class="local" href="/coahuila/">Coahuila</a><a class="local" href="/ramos-arizpe/">Ramos Arizpe</a><a href="/opinion/">Opinión</a></nav></div></div>
   </header>
   <main class="container category-page">
     <div class="section-header"><div><span class="section-kicker">SECCIÓN</span><h1>${esc(category)}</h1></div></div>
@@ -473,11 +474,11 @@ function articlePage(note) {
         <div class="wordmark"><span class="wordmark-main">RAMOS ARIZPE</span><span class="wordmark-sub">AL DÍA</span></div>
       </a>
     </div>
-    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav" aria-label="Secciones"><a href="/">Inicio</a><a href="/#mexico">México</a><a href="/#coahuila">Coahuila</a><a href="/#seguridad">Seguridad</a><a href="/#politica">Política</a></nav></div></div>
+    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav" aria-label="Secciones"><a href="/">Inicio</a><a href="/mexico/">México</a><a href="/politica/">Política</a><a href="/economia/">Economía</a><a href="/seguridad/">Seguridad</a><a href="/estados/">Estados</a><a href="/mundo/">Mundo</a><a class="local" href="/coahuila/">Coahuila</a><a class="local" href="/ramos-arizpe/">Ramos Arizpe</a><a href="/opinion/">Opinión</a></nav></div></div>
   </header>
   <main>
     <article class="container article-page">
-      <div class="article-breadcrumb"><a href="/">Inicio</a> / <span>${esc(note.category)}</span></div>
+      <div class="article-breadcrumb"><a href="/">Inicio</a> / <a href="/${slugify(note.category)}/">${esc(note.category)}</a></div>
       <span class="section-label">${esc(note.category)}</span>
       <h1>${esc(note.title)}</h1>
       ${note.summary ? `<p class="article-deck">${esc(note.summary)}</p>` : ""}
@@ -495,8 +496,11 @@ function articlePage(note) {
 }
 
 function buildSitemaps(notes) {
+  const categoryUrls = ["México","Coahuila","Ramos Arizpe","Región Sureste","Política","Seguridad","Economía","Estados","Mundo","Opinión"]
+    .map(category => `<url><loc>https://ramosarizpealdia.com/${slugify(category)}/</loc></url>`);
   const urls = [
     `<url><loc>https://ramosarizpealdia.com/</loc></url>`,
+    ...categoryUrls,
     ...notes.map(n => `<url><loc>https://ramosarizpealdia.com${articleURL(n)}</loc><lastmod>${parseDate(n.date).toISOString()}</lastmod></url>`)
   ];
   fs.writeFileSync(path.join(dist, "sitemap.xml"),
