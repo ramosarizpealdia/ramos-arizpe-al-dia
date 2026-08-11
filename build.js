@@ -585,6 +585,10 @@ fs.mkdirSync(dist, { recursive: true });
 ["admin", "uploads"].forEach(copyDir);
 
 const notes = loadNotes();
+console.log(`Noticias detectadas en content/noticias: ${notes.length}`);
+for (const n of notes) {
+  console.log(`- ${n.category}: ${n.title}`);
+}
 let home = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
 // Menú profesional: conserva el diseño general, pero usa páginas reales por sección
@@ -658,6 +662,48 @@ home = replaceHomeBlock(home,
 const nationalExtras = renderNationalExtraSections(notes);
 if (nationalExtras) {
   home = home.replace('<section class="newsletter">', `${nationalExtras}<section class="newsletter">`);
+}
+
+// Protección final: jamás publicar textos de demostración en la portada.
+// Si por cualquier diferencia de HTML un bloque viejo sobreviviera, se elimina
+// usando sus textos de muestra como señal.
+const demoPhrases = [
+  "El titular principal del día abre la agenda informativa con impacto nacional",
+  "La segunda historia de mayor relevancia ocupa un espacio destacado",
+  "Información económica, empresarial y financiera con lectura clara",
+  "Coahuila mantiene una presencia propia y fuerte dentro de una portada de alcance nacional",
+  "Un diseño sobrio para información policiaca y hechos de alto interés público",
+  "La cobertura política se presenta con jerarquía editorial y enfoque informativo",
+  "Una segunda nota amplía la agenda política del día",
+  "Industria, inversiones y negocios con especial atención al norte de México",
+  "La conversación pública también necesita contexto, argumentos y perspectiva"
+];
+
+for (const phrase of demoPhrases) {
+  if (home.includes(phrase)) {
+    console.warn(`ADVERTENCIA: quedó texto demo en la portada: ${phrase}`);
+  }
+}
+
+// Si hay noticias reales, la portada principal debe contener la más reciente/destacada.
+// Este reemplazo de respaldo vuelve a insertar el lead si por alguna razón no quedó aplicado.
+if (notes.length && !home.includes(notes.find(n => n.featured)?.title || notes[0].title)) {
+  const fallbackLead = renderLead(notes);
+  const leadStart = home.indexOf('<section class="container lead-grid" id="mexico">');
+  const leadEnd = home.indexOf('<div class="container rule"></div>', leadStart);
+  if (fallbackLead && leadStart !== -1 && leadEnd !== -1) {
+    home = home.slice(0, leadStart) + fallbackLead + "\\n" + renderLatest(notes) + "\\n" + home.slice(leadEnd);
+  }
+}
+
+// Último respaldo para Política/Economía: si no hay notas reales de esas secciones,
+// elimina el bloque de demostración completo.
+if (!categoryNotes(notes, "Política").length && !categoryNotes(notes, "Economía").length) {
+  const pStart = home.indexOf('<section class="container split-sections">');
+  const pEnd = home.indexOf('<section class="container opinion" id="opinion">', pStart);
+  if (pStart !== -1 && pEnd !== -1) {
+    home = home.slice(0, pStart) + home.slice(pEnd);
+  }
 }
 
 fs.writeFileSync(path.join(dist, "index.html"), home);
