@@ -100,10 +100,17 @@ function loadNotes() {
       const parsed = matter(raw);
       const data = parsed.data || {};
       const base = filename.replace(/\.md$/i, "");
+      const primaryCategory = data.category || "Noticias";
+      const extraSections = Array.isArray(data.sections)
+        ? data.sections
+        : (data.sections ? [data.sections] : []);
+      const sections = [...new Set([primaryCategory, ...extraSections].filter(Boolean))];
+
       return {
         title: data.title || "Sin título",
         summary: data.summary || "",
-        category: data.category || "Noticias",
+        category: primaryCategory,
+        sections,
         author: data.author || "Ramos Arizpe al Día",
         date: data.date || new Date().toISOString(),
         image: data.image || "",
@@ -194,7 +201,13 @@ function renderLatest(notes) {
 
 
 function categoryNotes(notes, category) {
-  return notes.filter(n => String(n.category || "").toLowerCase() === String(category).toLowerCase());
+  const wanted = String(category || "").toLowerCase();
+  return notes.filter(n => {
+    const sections = Array.isArray(n.sections) && n.sections.length
+      ? n.sections
+      : [n.category];
+    return sections.some(section => String(section || "").toLowerCase() === wanted);
+  });
 }
 
 function noteLink(note, inner) {
@@ -479,7 +492,9 @@ function articlePage(note) {
   <main>
     <article class="container article-page">
       <div class="article-breadcrumb"><a href="/">Inicio</a> / <a href="/${slugify(note.category)}/">${esc(note.category)}</a></div>
-      <span class="section-label">${esc(note.category)}</span>
+      <div class="article-sections">
+        ${(note.sections || [note.category]).map(section => `<a class="section-label" href="/${slugify(section)}/">${esc(section)}</a>`).join(" ")}
+      </div>
       <h1>${esc(note.title)}</h1>
       ${note.summary ? `<p class="article-deck">${esc(note.summary)}</p>` : ""}
       <div class="article-meta">Por <strong>${esc(note.author)}</strong> · Publicado ${esc(formatDate(note.date, true))}</div>
@@ -585,6 +600,8 @@ const extraCss = `
 .generated-card-copy p{color:#626262;line-height:1.45}
 .article-page{max-width:860px;padding-top:50px;padding-bottom:80px}
 .article-breadcrumb{font-size:13px;color:#6c6c6c;margin-bottom:24px}
+.article-sections{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px}
+.article-sections .section-label{display:inline-block;text-decoration:none}
 .article-page h1{font-family:"Source Serif 4",Georgia,serif;font-size:clamp(38px,6vw,68px);line-height:1.02;letter-spacing:-1.5px;margin:10px 0 16px}
 .article-deck{font-family:"Source Serif 4",Georgia,serif;font-size:23px;line-height:1.35;color:#555}
 .article-meta{font-size:14px;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:14px 0;margin:25px 0}
