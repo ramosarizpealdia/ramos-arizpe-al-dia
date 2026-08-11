@@ -25,40 +25,49 @@ function slugify(value = "") {
 }
 
 function parseDate(value) {
-  if (!value) {
+  if (value === undefined || value === null || value === "") {
     throw new Error("La noticia no tiene fecha de publicación.");
+  }
+
+  // gray-matter/js-yaml puede convertir automáticamente una fecha YAML en un objeto Date.
+  // Si ya es Date, se conserva exactamente el instante guardado y NO se reemplaza por la hora actual.
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new Error("La noticia contiene una fecha inválida.");
+    }
+    return new Date(value.getTime());
   }
 
   const raw = String(value).trim();
 
-  // Formato principal del CMS: DD/MM/YYYYTHH:MM
-  let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})T(\d{1,2}):(\d{2})$/);
+  // Formato principal usado por el CMS: DD/MM/YYYYTHH:MM
+  let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})T(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (m) {
-    const [, dd, mm, yyyy, hh, min] = m;
+    const [, dd, mm, yyyy, hh, min, sec = "00"] = m;
     return dateInMonterrey(
       Number(yyyy), Number(mm), Number(dd),
-      Number(hh), Number(min)
+      Number(hh), Number(min), Number(sec)
     );
   }
 
-  // También acepta DD/MM/YYYY HH:MM o DD/MM/YYYY, HH:MM
-  m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?$/);
+  // DD/MM/YYYY HH:MM o DD/MM/YYYY, HH:MM
+  m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if (m) {
-    const [, dd, mm, yyyy, hh = "00", min = "00"] = m;
+    const [, dd, mm, yyyy, hh = "00", min = "00", sec = "00"] = m;
     return dateInMonterrey(
       Number(yyyy), Number(mm), Number(dd),
-      Number(hh), Number(min)
+      Number(hh), Number(min), Number(sec)
     );
   }
 
-  // ISO con zona u offset explícito: se respeta tal cual.
+  // ISO con zona u offset explícito: conserva el instante exacto.
   if (/^\d{4}-\d{2}-\d{2}T/.test(raw) && (/[zZ]$/.test(raw) || /[+-]\d{2}:\d{2}$/.test(raw))) {
     const parsed = new Date(raw);
     if (!Number.isNaN(parsed.getTime())) return parsed;
   }
 
-  // ISO sin zona: se interpreta como hora local de Ramos Arizpe / Saltillo.
-  m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  // ISO sin zona: se interpreta como hora editorial local de Ramos Arizpe/Saltillo.
+  m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?$/);
   if (m) {
     const [, yyyy, mm, dd, hh = "00", min = "00", sec = "00"] = m;
     return dateInMonterrey(
@@ -67,27 +76,59 @@ function parseDate(value) {
     );
   }
 
-  throw new Error(`Fecha no reconocida: ${raw}. Corrige la fecha en /admin; no se sustituirá por la hora actual.`);
+  // Compatibilidad con Date convertido a texto por JavaScript:
+  // "Tue Aug 11 2026 06:09:00 GMT+0000 (Coordinated Universal Time)"
+  if (/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s/i.test(raw) && /GMT[+-]\d{4}/i.test(raw)) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  throw new Error(
+    `Fecha no reconocida: ${raw}. Corrige la fecha en /admin; nunca se sustituirá por la hora actual.`
+  );
 }
 
 function dateInMonterrey(year, month, day, hour = 0, minute = 0, second = 0) {
-  // America/Monterrey en agosto de 2026 corresponde a UTC-6.
-  // Guardamos el instante real correspondiente a la hora editorial local.
-  // Esta función evita que Node/Cloudflare interpreten la fecha usando UTC del servidor.
-  const utcMs = Date.UTC(year, month - 1, day, hour + 6, minute, second);
-  const d = new Date(utcMs);
-
-  // Validación básica de componentes.
+  // Ramos Arizpe / Saltillo usan America/Monterrey (UTC-6 en la operación actual).
+  // La hora introducida en el CMS se convierte a un instante UTC, pero siempre se
+  // vuelve a mostrar usando America/Monterrey.
   if (
+    !Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day) ||
+    !Number.isInteger(hour) || !Number.isInteger(minute) || !Number.isInteger(second) ||
     year < 2000 || year > 2100 ||
     month < 1 || month > 12 ||
     day < 1 || day > 31 ||
     hour < 0 || hour > 23 ||
     minute < 0 || minute > 59 ||
-    second < 0 || second > 59 ||
-    Number.isNaN(d.getTime())
+    second < 0 || second > 59
   ) {
     throw new Error("Fecha u hora inválida en una noticia.");
+  }
+
+  const d = new Date(Date.UTC(year, month - 1, day, hour + 6, minute, second));
+
+  // Comprobamos que al representarla en Monterrey conserve los componentes editoriales.
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Monterrey",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).formatToParts(d);
+
+  const obj = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  if (
+    Number(obj.year) !== year ||
+    Number(obj.month) !== month ||
+    Number(obj.day) !== day ||
+    (Number(obj.hour) % 24) !== hour ||
+    Number(obj.minute) !== minute ||
+    Number(obj.second) !== second
+  ) {
+    throw new Error("La fecha no pudo fijarse correctamente en America/Monterrey.");
   }
 
   return d;
@@ -153,7 +194,7 @@ function loadNotes() {
         category: primaryCategory,
         sections,
         author: data.author || "Ramos Arizpe al Día",
-        date: data.date || new Date().toISOString(),
+        date: data.date,
         image: data.image || "",
         featured: Boolean(data.featured),
         body: parsed.content || "",
@@ -756,7 +797,7 @@ for (const n of notes) {
     timeStyle: "short"
   }).format(fixed)}`);
 }
-console.log("Fechas editoriales verificadas en America/Monterrey.");
+console.log("Fechas editoriales verificadas en America/Monterrey; ninguna fecha usa la hora del build.");
 
 fs.writeFileSync(path.join(dist, "index.html"), home);
 
