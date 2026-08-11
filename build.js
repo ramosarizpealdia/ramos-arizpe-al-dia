@@ -25,31 +25,72 @@ function slugify(value = "") {
 }
 
 function parseDate(value) {
-  if (!value) return new Date();
-
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (!value) {
+    throw new Error("La noticia no tiene fecha de publicación.");
+  }
 
   const raw = String(value).trim();
 
-  const direct = new Date(raw);
-  if (!Number.isNaN(direct.getTime())) return direct;
-
-  const mx = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:(?:T|[,\s]+)(\d{1,2}):(\d{2}))?$/);
-  if (mx) {
-    const [, dd, mm, yyyy, hh = "00", min = "00"] = mx;
-    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), 0);
-    if (!Number.isNaN(d.getTime())) return d;
+  // Formato principal del CMS: DD/MM/YYYYTHH:MM
+  let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})T(\d{1,2}):(\d{2})$/);
+  if (m) {
+    const [, dd, mm, yyyy, hh, min] = m;
+    return dateInMonterrey(
+      Number(yyyy), Number(mm), Number(dd),
+      Number(hh), Number(min)
+    );
   }
 
-  const ymd = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?$/);
-  if (ymd) {
-    const [, yyyy, mm, dd, hh = "00", min = "00"] = ymd;
-    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), 0);
-    if (!Number.isNaN(d.getTime())) return d;
+  // También acepta DD/MM/YYYY HH:MM o DD/MM/YYYY, HH:MM
+  m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?$/);
+  if (m) {
+    const [, dd, mm, yyyy, hh = "00", min = "00"] = m;
+    return dateInMonterrey(
+      Number(yyyy), Number(mm), Number(dd),
+      Number(hh), Number(min)
+    );
   }
 
-  console.warn("Fecha no reconocida:", raw, "— se usará la fecha actual para evitar que falle el despliegue.");
-  return new Date();
+  // ISO con zona u offset explícito: se respeta tal cual.
+  if (/^\d{4}-\d{2}-\d{2}T/.test(raw) && (/[zZ]$/.test(raw) || /[+-]\d{2}:\d{2}$/.test(raw))) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  // ISO sin zona: se interpreta como hora local de Ramos Arizpe / Saltillo.
+  m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    const [, yyyy, mm, dd, hh = "00", min = "00", sec = "00"] = m;
+    return dateInMonterrey(
+      Number(yyyy), Number(mm), Number(dd),
+      Number(hh), Number(min), Number(sec)
+    );
+  }
+
+  throw new Error(`Fecha no reconocida: ${raw}. Corrige la fecha en /admin; no se sustituirá por la hora actual.`);
+}
+
+function dateInMonterrey(year, month, day, hour = 0, minute = 0, second = 0) {
+  // America/Monterrey en agosto de 2026 corresponde a UTC-6.
+  // Guardamos el instante real correspondiente a la hora editorial local.
+  // Esta función evita que Node/Cloudflare interpreten la fecha usando UTC del servidor.
+  const utcMs = Date.UTC(year, month - 1, day, hour + 6, minute, second);
+  const d = new Date(utcMs);
+
+  // Validación básica de componentes.
+  if (
+    year < 2000 || year > 2100 ||
+    month < 1 || month > 12 ||
+    day < 1 || day > 31 ||
+    hour < 0 || hour > 23 ||
+    minute < 0 || minute > 59 ||
+    second < 0 || second > 59 ||
+    Number.isNaN(d.getTime())
+  ) {
+    throw new Error("Fecha u hora inválida en una noticia.");
+  }
+
+  return d;
 }
 
 function copyFile(name) {
@@ -585,6 +626,13 @@ fs.mkdirSync(dist, { recursive: true });
 ["admin", "uploads"].forEach(copyDir);
 
 const notes = loadNotes();
+
+// Validar todas las fechas antes de generar cualquier archivo.
+// Si una nota tiene una fecha incorrecta, el build se detiene en vez de publicar una fecha inventada.
+for (const note of notes) {
+  parseDate(note.date);
+}
+
 console.log(`Noticias detectadas en content/noticias: ${notes.length}`);
 for (const n of notes) {
   console.log(`- ${n.category}: ${n.title}`);
@@ -600,8 +648,11 @@ console.log("Conteo por sección:", {
 });
 let home = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
-// Menú profesional: conserva el diseño general, pero usa páginas reales por sección
-// y agrupa las secciones secundarias dentro de "Más".
+// ESTRATEGIA NUEVA:
+// Ya no intentamos borrar/reemplazar uno por uno los módulos de demostración del index.html.
+// Conservamos el encabezado y pie originales, pero reconstruimos TODO <main> desde las noticias reales.
+// Así ningún texto ficticio puede sobrevivir por diferencias de HTML.
+
 const professionalNav = `<div class="nav-shell"><div class="container nav-inner"><nav class="main-nav professional-nav" aria-label="Secciones">
 <a href="/">Inicio</a>
 <a href="/mexico/">México</a>
@@ -627,171 +678,93 @@ home = home.replace(
   professionalNav
 );
 
-function replaceHomeBlock(html, startMarker, nextMarker, replacement) {
-  const start = html.indexOf(startMarker);
-  const end = html.indexOf(nextMarker, start + startMarker.length);
-  if (start === -1 || end === -1) return html;
-  const cleanReplacement = replacement ? `${replacement}
-` : "";
-  return html.slice(0, start) + cleanReplacement + html.slice(end);
-}
-
 const lead = renderLead(notes);
 const latest = renderLatest(notes);
-if (lead) {
-  home = replaceHomeBlock(home,
-    '<section class="container lead-grid" id="mexico">',
-    '<div class="container rule"></div>',
-    `${lead}
-${latest}`
-  );
-}
-
-home = replaceHomeBlock(home,
-  '<section class="container section-block" id="coahuila">',
-  '<section class="dark-band" id="seguridad">',
-  renderCoahuilaSection(notes)
-);
-home = replaceHomeBlock(home,
-  '<section class="dark-band" id="seguridad">',
-  '<section class="container split-sections">',
-  renderSecuritySection(notes)
-);
-home = replaceHomeBlock(home,
-  '<section class="container split-sections">',
-  '<section class="container opinion" id="opinion">',
-  renderPoliticsEconomySection(notes)
-);
-home = replaceHomeBlock(home,
-  '<section class="container opinion" id="opinion">',
-  '<section class="newsletter">',
-  renderOpinionSection(notes)
-);
-
+const coahuilaSection = renderCoahuilaSection(notes);
+const securitySection = renderSecuritySection(notes);
+const politicsEconomySection = renderPoliticsEconomySection(notes);
+const opinionSection = renderOpinionSection(notes);
 const nationalExtras = renderNationalExtraSections(notes);
-if (nationalExtras) {
-  home = home.replace('<section class="newsletter">', `${nationalExtras}<section class="newsletter">`);
+
+const tickerNotes = notes.slice(0, 3);
+const tickerText = tickerNotes.length
+  ? tickerNotes.map(n => esc(n.title)).join(" • ")
+  : "Información de Ramos Arizpe, Saltillo, Coahuila y México.";
+
+const liveTicker = `<section class="ticker">
+  <div class="container ticker-inner">
+    <span class="ticker-label">AL MOMENTO</span>
+    <strong>Últimas noticias</strong>
+    <span class="ticker-sep">•</span>
+    <span>${tickerText}</span>
+  </div>
+</section>`;
+
+const newsletter = `<section class="newsletter">
+  <div class="container newsletter-inner">
+    <div>
+      <span class="section-kicker">INFORMACIÓN DIRECTA</span>
+      <h2>Las noticias importantes, en un solo lugar</h2>
+      <p>Sigue la información de Ramos Arizpe al Día y mantente al tanto de las noticias más relevantes.</p>
+    </div>
+    <a class="subscribe" href="https://www.facebook.com/share/1CWiSRPs4B/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">Síguenos en Facebook</a>
+  </div>
+</section>`;
+
+const mainParts = [
+  liveTicker,
+  lead || "",
+  lead ? '<div class="container rule"></div>' : "",
+  latest,
+  coahuilaSection,
+  securitySection,
+  politicsEconomySection,
+  nationalExtras,
+  opinionSection,
+  newsletter
+].filter(Boolean);
+
+const cleanMain = `<main>
+${mainParts.join("\n")}
+</main>`;
+
+const mainStart = home.indexOf("<main>");
+const mainEnd = home.indexOf("</main>", mainStart);
+
+if (mainStart === -1 || mainEnd === -1) {
+  throw new Error("No se pudo localizar <main> en index.html.");
 }
 
+home = home.slice(0, mainStart) + cleanMain + home.slice(mainEnd + "</main>".length);
 
-function removeContainingSectionByPhrase(html, phrase) {
-  const phraseIndex = html.indexOf(phrase);
-  if (phraseIndex === -1) return html;
-
-  const sectionStart = html.lastIndexOf("<section", phraseIndex);
-  if (sectionStart === -1) return html;
-
-  const tagRegex = /<\/?section\b[^>]*>/gi;
-  tagRegex.lastIndex = sectionStart;
-
-  let depth = 0;
-  let match;
-
-  while ((match = tagRegex.exec(html)) !== null) {
-    const tag = match[0];
-    if (/^<section\b/i.test(tag)) {
-      depth += 1;
-    } else {
-      depth -= 1;
-      if (depth === 0) {
-        const sectionEnd = tagRegex.lastIndex;
-        return html.slice(0, sectionStart) + html.slice(sectionEnd);
-      }
-    }
-  }
-
-  return html;
-}
-
-// Limpieza final determinista de la portada.
-// Esta etapa corre DESPUÉS de construir todas las secciones y evita que cualquier
-// bloque de demostración del index.html original llegue al sitio publicado.
-
-// Política + Economía: si no existen notas reales, elimina estructuralmente
-// la sección que contiene los textos de demostración, aunque su marcado haya cambiado.
-if (!categoryNotes(notes, "Política").length && !categoryNotes(notes, "Economía").length) {
-  const before = home;
-  home = removeContainingSectionByPhrase(
-    home,
-    "La cobertura política se presenta con jerarquía editorial y enfoque informativo"
-  );
-
-  if (home !== before) {
-    console.log("Módulo demo Política/Economía eliminado estructuralmente.");
-  }
-}
-
-// Opinión: si no existen notas reales, elimina estructuralmente el módulo demo.
-if (!categoryNotes(notes, "Opinión").length) {
-  const before = home;
-  home = removeContainingSectionByPhrase(
-    home,
-    "La conversación pública también necesita contexto, argumentos y perspectiva"
-  );
-
-  if (home !== before) {
-    console.log("Módulo demo Opinión eliminado estructuralmente.");
+// Validación simple y útil: comprueba que las noticias reales sí quedaron en la portada.
+if (notes.length) {
+  const featuredForHome = notes.find(n => n.featured) || notes[0];
+  if (!home.includes(esc(featuredForHome.title))) {
+    throw new Error("La noticia principal real no quedó insertada en la portada.");
   }
 }
 
-// Seguridad: si existen notas reales, no debe sobrevivir el texto demo.
-if (categoryNotes(notes, "Seguridad").length &&
-    home.includes("Un diseño sobrio para información policiaca y hechos de alto interés público")) {
-  home = home.replace(
-    /<section class="dark-band" id="seguridad">[\s\S]*?<\/section>\s*(?=<section class="container split-sections">|<section class="container opinion"|<section class="newsletter">)/,
-    renderSecuritySection(notes) + "\n"
-  );
+// Ya no validamos textos demo: al reconstruir TODO <main>, esos textos ni siquiera entran al dist.
+console.log("Portada reconstruida desde cero con contenido real.");
+console.log(`Noticias reales integradas: ${notes.length}.`);
+for (const n of notes) {
+  const fixed = parseDate(n.date);
+  console.log(`Fecha fija: ${n.title} -> ${new Intl.DateTimeFormat("es-MX", {
+    timeZone: "America/Monterrey",
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(fixed)}`);
 }
-
-// Coahuila/región: si existen notas reales, no debe sobrevivir el bloque demo.
-if (
-  (categoryNotes(notes, "Coahuila").length ||
-   categoryNotes(notes, "Ramos Arizpe").length ||
-   categoryNotes(notes, "Saltillo").length ||
-   categoryNotes(notes, "Región Sureste").length) &&
-  home.includes("Coahuila mantiene una presencia propia y fuerte dentro de una portada de alcance nacional")
-) {
-  home = home.replace(
-    /<section class="container section-block" id="coahuila">[\s\S]*?<\/section>\s*(?=<section class="dark-band" id="seguridad">)/,
-    renderCoahuilaSection(notes) + "\n"
-  );
-}
-
-// Portada principal: si hay noticias, sustituye de forma definitiva el bloque demo.
-const featuredForHome = notes.find(n => n.featured) || notes[0];
-if (featuredForHome &&
-    home.includes("El titular principal del día abre la agenda informativa con impacto nacional")) {
-  home = home.replace(
-    /<section class="container lead-grid" id="mexico">[\s\S]*?<\/section>\s*<div class="container rule"><\/div>/,
-    `${renderLead(notes)}\n${renderLatest(notes)}\n<div class="container rule"></div>`
-  );
-}
-
-// Validación: Cloudflare NO publicará una portada que todavía contenga contenido ficticio.
-const forbiddenDemoPhrases = [
-  "El titular principal del día abre la agenda informativa con impacto nacional",
-  "La segunda historia de mayor relevancia ocupa un espacio destacado",
-  "Información económica, empresarial y financiera con lectura clara",
-  "Coahuila mantiene una presencia propia y fuerte dentro de una portada de alcance nacional",
-  "Un diseño sobrio para información policiaca y hechos de alto interés público",
-  "La cobertura política se presenta con jerarquía editorial y enfoque informativo",
-  "Una segunda nota amplía la agenda política del día",
-  "Industria, inversiones y negocios con especial atención al norte de México",
-  "La conversación pública también necesita contexto, argumentos y perspectiva"
-];
-
-const remainingDemo = forbiddenDemoPhrases.filter(phrase => home.includes(phrase));
-if (remainingDemo.length) {
-  console.error("ERROR: todavía quedaron textos de demostración:", remainingDemo);
-  throw new Error("La portada aún contiene contenido de demostración. Se cancela el despliegue para no publicar una versión incorrecta.");
-}
-
-console.log("Portada validada: notas reales cargadas y contenido de demostración eliminado.");
+console.log("Fechas editoriales verificadas en America/Monterrey.");
 
 fs.writeFileSync(path.join(dist, "index.html"), home);
 
 const extraCss = `
 /* Contenido generado automáticamente desde /admin */
+.ticker-inner>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.newsletter .subscribe{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+
 .lead-story>a,.secondary-story>a,.generated-news-card>a{color:inherit;text-decoration:none;display:block}
 .article-cover{width:100%;object-fit:cover;display:block}
 .generated-latest{padding-top:24px;padding-bottom:55px}
