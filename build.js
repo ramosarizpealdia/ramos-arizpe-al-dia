@@ -217,8 +217,9 @@ function noteLink(note, inner) {
 function renderCoahuilaSection(notes) {
   const coahuila = categoryNotes(notes, "Coahuila");
   const ramos = categoryNotes(notes, "Ramos Arizpe");
+  const saltillo = categoryNotes(notes, "Saltillo");
   const region = categoryNotes(notes, "Región Sureste");
-  const pool = [...coahuila, ...ramos, ...region]
+  const pool = [...coahuila, ...ramos, ...saltillo, ...region]
     .sort((a, b) => parseDate(b.date) - parseDate(a.date));
 
   if (!pool.length) return "";
@@ -227,7 +228,7 @@ function renderCoahuilaSection(notes) {
   const used = new Set([feature.slug]);
   const stack = [];
 
-  for (const candidate of [ramos[0], region[0], coahuila[1], ...pool]) {
+  for (const candidate of [ramos[0], saltillo[0], region[0], coahuila[1], ...pool]) {
     if (candidate && !used.has(candidate.slug)) {
       stack.push(candidate);
       used.add(candidate.slug);
@@ -241,6 +242,7 @@ function renderCoahuilaSection(notes) {
       <nav>
         <a href="/coahuila/">Coahuila</a>
         <a href="/ramos-arizpe/">Ramos Arizpe</a>
+        <a href="/saltillo/">Saltillo</a>
         <a href="/region-sureste/">Región Sureste</a>
       </nav>
     </div>
@@ -421,7 +423,25 @@ function categoryArchivePage(category, notes) {
         <div class="wordmark"><span class="wordmark-main">RAMOS ARIZPE</span><span class="wordmark-sub">AL DÍA</span></div>
       </a>
     </div>
-    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav" aria-label="Secciones"><a href="/">Inicio</a><a href="/mexico/">México</a><a href="/politica/">Política</a><a href="/economia/">Economía</a><a href="/seguridad/">Seguridad</a><a href="/estados/">Estados</a><a href="/mundo/">Mundo</a><a class="local" href="/coahuila/">Coahuila</a><a class="local" href="/ramos-arizpe/">Ramos Arizpe</a><a href="/opinion/">Opinión</a></nav></div></div>
+    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav professional-nav" aria-label="Secciones">
+<a href="/">Inicio</a>
+<a href="/mexico/">México</a>
+<a class="local" href="/coahuila/">Coahuila</a>
+<a class="local" href="/ramos-arizpe/">Ramos Arizpe</a>
+<a class="local" href="/saltillo/">Saltillo</a>
+<a href="/seguridad/">Seguridad</a>
+<a href="/politica/">Política</a>
+<a href="/economia/">Economía</a>
+<div class="nav-more">
+  <button type="button" class="nav-more-button" aria-haspopup="true">Más ▾</button>
+  <div class="nav-more-menu">
+    <a href="/region-sureste/">Región Sureste</a>
+    <a href="/estados/">Estados</a>
+    <a href="/mundo/">Mundo</a>
+    <a href="/opinion/">Opinión</a>
+  </div>
+</div>
+</nav></div></div>
   </header>
   <main class="container category-page">
     <div class="section-header"><div><span class="section-kicker">SECCIÓN</span><h1>${esc(category)}</h1></div></div>
@@ -487,7 +507,25 @@ function articlePage(note) {
         <div class="wordmark"><span class="wordmark-main">RAMOS ARIZPE</span><span class="wordmark-sub">AL DÍA</span></div>
       </a>
     </div>
-    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav" aria-label="Secciones"><a href="/">Inicio</a><a href="/mexico/">México</a><a href="/politica/">Política</a><a href="/economia/">Economía</a><a href="/seguridad/">Seguridad</a><a href="/estados/">Estados</a><a href="/mundo/">Mundo</a><a class="local" href="/coahuila/">Coahuila</a><a class="local" href="/ramos-arizpe/">Ramos Arizpe</a><a href="/opinion/">Opinión</a></nav></div></div>
+    <div class="nav-shell"><div class="container nav-inner"><nav class="main-nav professional-nav" aria-label="Secciones">
+<a href="/">Inicio</a>
+<a href="/mexico/">México</a>
+<a class="local" href="/coahuila/">Coahuila</a>
+<a class="local" href="/ramos-arizpe/">Ramos Arizpe</a>
+<a class="local" href="/saltillo/">Saltillo</a>
+<a href="/seguridad/">Seguridad</a>
+<a href="/politica/">Política</a>
+<a href="/economia/">Economía</a>
+<div class="nav-more">
+  <button type="button" class="nav-more-button" aria-haspopup="true">Más ▾</button>
+  <div class="nav-more-menu">
+    <a href="/region-sureste/">Región Sureste</a>
+    <a href="/estados/">Estados</a>
+    <a href="/mundo/">Mundo</a>
+    <a href="/opinion/">Opinión</a>
+  </div>
+</div>
+</nav></div></div>
   </header>
   <main>
     <article class="container article-page">
@@ -511,7 +549,7 @@ function articlePage(note) {
 }
 
 function buildSitemaps(notes) {
-  const categoryUrls = ["México","Coahuila","Ramos Arizpe","Región Sureste","Política","Seguridad","Economía","Estados","Mundo","Opinión"]
+  const categoryUrls = ["México","Coahuila","Ramos Arizpe","Saltillo","Región Sureste","Política","Seguridad","Economía","Estados","Mundo","Opinión"]
     .map(category => `<url><loc>https://ramosarizpealdia.com/${slugify(category)}/</loc></url>`);
   const urls = [
     `<url><loc>https://ramosarizpealdia.com/</loc></url>`,
@@ -549,23 +587,32 @@ fs.mkdirSync(dist, { recursive: true });
 const notes = loadNotes();
 let home = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
-// Convierte los enlaces internos del menú de la portada en páginas reales de sección.
-// Esto se hace sobre el HTML ya cargado, para que sí afecte a la portada publicada.
-const homeNavRoutes = {
-  "#mexico": "/mexico/",
-  "#politica": "/politica/",
-  "#economia": "/economia/",
-  "#seguridad": "/seguridad/",
-  "#estados": "/estados/",
-  "#mundo": "/mundo/",
-  "#coahuila": "/coahuila/",
-  "#ramos": "/ramos-arizpe/",
-  "#opinion": "/opinion/"
-};
+// Menú profesional: conserva el diseño general, pero usa páginas reales por sección
+// y agrupa las secciones secundarias dentro de "Más".
+const professionalNav = `<div class="nav-shell"><div class="container nav-inner"><nav class="main-nav professional-nav" aria-label="Secciones">
+<a href="/">Inicio</a>
+<a href="/mexico/">México</a>
+<a class="local" href="/coahuila/">Coahuila</a>
+<a class="local" href="/ramos-arizpe/">Ramos Arizpe</a>
+<a class="local" href="/saltillo/">Saltillo</a>
+<a href="/seguridad/">Seguridad</a>
+<a href="/politica/">Política</a>
+<a href="/economia/">Economía</a>
+<div class="nav-more">
+  <button type="button" class="nav-more-button" aria-haspopup="true">Más ▾</button>
+  <div class="nav-more-menu">
+    <a href="/region-sureste/">Región Sureste</a>
+    <a href="/estados/">Estados</a>
+    <a href="/mundo/">Mundo</a>
+    <a href="/opinion/">Opinión</a>
+  </div>
+</div>
+</nav></div></div>`;
 
-for (const [anchor, route] of Object.entries(homeNavRoutes)) {
-  home = home.replaceAll(`href="${anchor}"`, `href="${route}"`);
-}
+home = home.replace(
+  /<div class="nav-shell">[\s\S]*?<nav class="main-nav"[\s\S]*?<\/nav>[\s\S]*?<\/div><\/div>/,
+  professionalNav
+);
 
 const lead = renderLead(notes);
 if (lead) {
@@ -602,6 +649,19 @@ const extraCss = `
 .article-breadcrumb{font-size:13px;color:#6c6c6c;margin-bottom:24px}
 .article-sections{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px}
 .article-sections .section-label{display:inline-block;text-decoration:none}
+.professional-nav{display:flex;align-items:center;gap:0;overflow:visible}
+.professional-nav .nav-more{position:relative;display:flex;align-items:stretch}
+.professional-nav .nav-more-button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;padding:inherit;cursor:pointer;height:100%}
+.professional-nav .nav-more-menu{display:none;position:absolute;top:100%;right:0;min-width:190px;background:#fff;border:1px solid #e3e3e3;box-shadow:0 10px 24px rgba(0,0,0,.12);z-index:50}
+.professional-nav .nav-more-menu a{display:block;white-space:nowrap;padding:12px 16px;color:#111;background:#fff}
+.professional-nav .nav-more-menu a:hover{background:#f4f4f4}
+.professional-nav .nav-more:hover .nav-more-menu,
+.professional-nav .nav-more:focus-within .nav-more-menu{display:block}
+@media(max-width:900px){
+  .professional-nav{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch}
+  .professional-nav>a,.professional-nav .nav-more{flex:0 0 auto}
+  .professional-nav .nav-more-menu{position:fixed;top:auto;right:12px}
+}
 .article-page h1{font-family:"Source Serif 4",Georgia,serif;font-size:clamp(38px,6vw,68px);line-height:1.02;letter-spacing:-1.5px;margin:10px 0 16px}
 .article-deck{font-family:"Source Serif 4",Georgia,serif;font-size:23px;line-height:1.35;color:#555}
 .article-meta{font-size:14px;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:14px 0;margin:25px 0}
@@ -716,7 +776,7 @@ for (const note of notes) {
 }
 
 // Genera una página de archivo para cada categoría usada en el CMS.
-const allCategories = ["México","Coahuila","Ramos Arizpe","Región Sureste","Política","Seguridad","Economía","Estados","Mundo","Opinión"];
+const allCategories = ["México","Coahuila","Ramos Arizpe","Saltillo","Región Sureste","Política","Seguridad","Economía","Estados","Mundo","Opinión"];
 for (const category of allCategories) {
   const categoryDir = path.join(dist, slugify(category));
   fs.mkdirSync(categoryDir, { recursive: true });
