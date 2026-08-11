@@ -34,7 +34,7 @@ function parseDate(value) {
   const direct = new Date(raw);
   if (!Number.isNaN(direct.getTime())) return direct;
 
-  const mx = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?$/);
+  const mx = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:(?:T|[,\s]+)(\d{1,2}):(\d{2}))?$/);
   if (mx) {
     const [, dd, mm, yyyy, hh = "00", min = "00"] = mx;
     const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), 0);
@@ -589,6 +589,15 @@ console.log(`Noticias detectadas en content/noticias: ${notes.length}`);
 for (const n of notes) {
   console.log(`- ${n.category}: ${n.title}`);
 }
+console.log("Conteo por sección:", {
+  Seguridad: categoryNotes(notes, "Seguridad").length,
+  Coahuila: categoryNotes(notes, "Coahuila").length,
+  "Ramos Arizpe": categoryNotes(notes, "Ramos Arizpe").length,
+  Saltillo: categoryNotes(notes, "Saltillo").length,
+  Política: categoryNotes(notes, "Política").length,
+  Economía: categoryNotes(notes, "Economía").length,
+  Opinión: categoryNotes(notes, "Opinión").length
+});
 let home = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
 // Menú profesional: conserva el diseño general, pero usa páginas reales por sección
@@ -664,10 +673,61 @@ if (nationalExtras) {
   home = home.replace('<section class="newsletter">', `${nationalExtras}<section class="newsletter">`);
 }
 
-// Protección final: jamás publicar textos de demostración en la portada.
-// Si por cualquier diferencia de HTML un bloque viejo sobreviviera, se elimina
-// usando sus textos de muestra como señal.
-const demoPhrases = [
+// Limpieza final determinista de la portada.
+// Esta etapa corre DESPUÉS de construir todas las secciones y evita que cualquier
+// bloque de demostración del index.html original llegue al sitio publicado.
+
+// Política + Economía: si no existen notas reales en esas categorías, elimina TODO el módulo.
+if (!categoryNotes(notes, "Política").length && !categoryNotes(notes, "Economía").length) {
+  home = home.replace(
+    /<section class="container split-sections">[\s\S]*?<\/section>\s*(?=<section class="container opinion" id="opinion">)/,
+    ""
+  );
+}
+
+// Opinión: si no existen notas reales, elimina el módulo de demostración.
+if (!categoryNotes(notes, "Opinión").length) {
+  home = home.replace(
+    /<section class="container opinion" id="opinion">[\s\S]*?<\/section>\s*(?=<section class="newsletter">)/,
+    ""
+  );
+}
+
+// Seguridad: si existen notas reales, no debe sobrevivir el texto demo.
+if (categoryNotes(notes, "Seguridad").length &&
+    home.includes("Un diseño sobrio para información policiaca y hechos de alto interés público")) {
+  home = home.replace(
+    /<section class="dark-band" id="seguridad">[\s\S]*?<\/section>\s*(?=<section class="container split-sections">|<section class="container opinion"|<section class="newsletter">)/,
+    renderSecuritySection(notes) + "\n"
+  );
+}
+
+// Coahuila/región: si existen notas reales, no debe sobrevivir el bloque demo.
+if (
+  (categoryNotes(notes, "Coahuila").length ||
+   categoryNotes(notes, "Ramos Arizpe").length ||
+   categoryNotes(notes, "Saltillo").length ||
+   categoryNotes(notes, "Región Sureste").length) &&
+  home.includes("Coahuila mantiene una presencia propia y fuerte dentro de una portada de alcance nacional")
+) {
+  home = home.replace(
+    /<section class="container section-block" id="coahuila">[\s\S]*?<\/section>\s*(?=<section class="dark-band" id="seguridad">)/,
+    renderCoahuilaSection(notes) + "\n"
+  );
+}
+
+// Portada principal: si hay noticias, sustituye de forma definitiva el bloque demo.
+const featuredForHome = notes.find(n => n.featured) || notes[0];
+if (featuredForHome &&
+    home.includes("El titular principal del día abre la agenda informativa con impacto nacional")) {
+  home = home.replace(
+    /<section class="container lead-grid" id="mexico">[\s\S]*?<\/section>\s*<div class="container rule"><\/div>/,
+    `${renderLead(notes)}\n${renderLatest(notes)}\n<div class="container rule"></div>`
+  );
+}
+
+// Validación: Cloudflare NO publicará una portada que todavía contenga contenido ficticio.
+const forbiddenDemoPhrases = [
   "El titular principal del día abre la agenda informativa con impacto nacional",
   "La segunda historia de mayor relevancia ocupa un espacio destacado",
   "Información económica, empresarial y financiera con lectura clara",
@@ -679,32 +739,13 @@ const demoPhrases = [
   "La conversación pública también necesita contexto, argumentos y perspectiva"
 ];
 
-for (const phrase of demoPhrases) {
-  if (home.includes(phrase)) {
-    console.warn(`ADVERTENCIA: quedó texto demo en la portada: ${phrase}`);
-  }
+const remainingDemo = forbiddenDemoPhrases.filter(phrase => home.includes(phrase));
+if (remainingDemo.length) {
+  console.error("ERROR: todavía quedaron textos de demostración:", remainingDemo);
+  throw new Error("La portada aún contiene contenido de demostración. Se cancela el despliegue para no publicar una versión incorrecta.");
 }
 
-// Si hay noticias reales, la portada principal debe contener la más reciente/destacada.
-// Este reemplazo de respaldo vuelve a insertar el lead si por alguna razón no quedó aplicado.
-if (notes.length && !home.includes(notes.find(n => n.featured)?.title || notes[0].title)) {
-  const fallbackLead = renderLead(notes);
-  const leadStart = home.indexOf('<section class="container lead-grid" id="mexico">');
-  const leadEnd = home.indexOf('<div class="container rule"></div>', leadStart);
-  if (fallbackLead && leadStart !== -1 && leadEnd !== -1) {
-    home = home.slice(0, leadStart) + fallbackLead + "\\n" + renderLatest(notes) + "\\n" + home.slice(leadEnd);
-  }
-}
-
-// Último respaldo para Política/Economía: si no hay notas reales de esas secciones,
-// elimina el bloque de demostración completo.
-if (!categoryNotes(notes, "Política").length && !categoryNotes(notes, "Economía").length) {
-  const pStart = home.indexOf('<section class="container split-sections">');
-  const pEnd = home.indexOf('<section class="container opinion" id="opinion">', pStart);
-  if (pStart !== -1 && pEnd !== -1) {
-    home = home.slice(0, pStart) + home.slice(pEnd);
-  }
-}
+console.log("Portada validada: notas reales cargadas y contenido de demostración eliminado.");
 
 fs.writeFileSync(path.join(dist, "index.html"), home);
 
