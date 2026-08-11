@@ -1,29 +1,56 @@
 document.addEventListener("DOMContentLoaded", () => {
   const masthead = document.querySelector(".masthead");
-  const toggle = document.querySelector(".menu-toggle");
-  if (masthead && toggle) {
-    toggle.addEventListener("click", () => {
+  const menuToggle = document.querySelector(".menu-toggle");
+
+  if (masthead && menuToggle) {
+    menuToggle.addEventListener("click", () => {
       const open = masthead.classList.toggle("menu-open");
-      toggle.setAttribute("aria-expanded", String(open));
+      menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
     });
   }
 
-  document.querySelectorAll(".nav-more-button").forEach(button => {
-    button.addEventListener("click", (event) => {
+  const moreMenus = document.querySelectorAll(".nav-more");
+
+  moreMenus.forEach(menu => {
+    const button = menu.querySelector(".nav-more-button");
+    if (!button) return;
+
+    button.addEventListener("click", event => {
       event.preventDefault();
-      const parent = button.closest(".nav-more");
-      const open = parent.classList.toggle("open");
-      button.setAttribute("aria-expanded", String(open));
+      event.stopPropagation();
+
+      const willOpen = !menu.classList.contains("open");
+
+      moreMenus.forEach(otherMenu => {
+        otherMenu.classList.remove("open");
+        const otherButton = otherMenu.querySelector(".nav-more-button");
+        if (otherButton) otherButton.setAttribute("aria-expanded", "false");
+      });
+
+      if (willOpen) {
+        menu.classList.add("open");
+        button.setAttribute("aria-expanded", "true");
+      }
     });
   });
 
-  document.addEventListener("click", (event) => {
-    if (!event.target.closest(".nav-more")) {
-      document.querySelectorAll(".nav-more.open").forEach(el => {
-        el.classList.remove("open");
-        const btn = el.querySelector(".nav-more-button");
-        if (btn) btn.setAttribute("aria-expanded", "false");
-      });
-    }
+  document.addEventListener("click", event => {
+    if (event.target.closest(".nav-more")) return;
+
+    moreMenus.forEach(menu => {
+      menu.classList.remove("open");
+      const button = menu.querySelector(".nav-more-button");
+      if (button) button.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+
+    moreMenus.forEach(menu => {
+      menu.classList.remove("open");
+      const button = menu.querySelector(".nav-more-button");
+      if (button) button.setAttribute("aria-expanded", "false");
+    });
   });
 });

@@ -84,161 +84,49 @@ function parseFrontMatter(raw, filename) {
   if (!normalized.startsWith("---\n")) {
     throw new Error(`Front matter faltante en ${filename}`);
   }
-
   const end = normalized.indexOf("\n---", 4);
   if (end === -1) throw new Error(`Front matter sin cerrar en ${filename}`);
 
-  const headerLines = normalized.slice(4, end).split("\n");
+  const header = normalized.slice(4, end).split("\n");
   const body = normalized.slice(end + 4).replace(/^\n+/, "");
   const data = {};
-  let i = 0;
 
-  while (i < headerLines.length) {
-    const original = headerLines[i].replace(/\t/g, "  ");
-    const trimmed = original.trim();
+  let activeListKey = null;
 
-    if (!trimmed || trimmed.startsWith("#")) {
-      i++;
+  for (const originalLine of header) {
+    const line = originalLine.replace(/\t/g, "  ");
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+
+    const listMatch = line.match(/^\s*-\s+(.*)$/);
+    if (listMatch && activeListKey) {
+      data[activeListKey].push(stripQuotes(listMatch[1]));
       continue;
     }
 
-    const keyMatch = original.match(/^([A-Za-z0-9_-]+):(?:\s*(.*))?$/);
-    if (!keyMatch) {
-      i++;
+    const keyMatch = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (!keyMatch) continue;
+
+    const [, key, rawValue] = keyMatch;
+    const value = rawValue.trim();
+
+    if (value === "") {
+      data[key] = [];
+      activeListKey = key;
       continue;
     }
 
-    const key = keyMatch[1];
-    let rawValue = (keyMatch[2] ?? "").trim();
+    activeListKey = null;
 
-    // Soporta bloques YAML de Decap: >, >-, | y |-
-    if (/^[>|][+-]?$/.test(rawValue)) {
-      const style = rawValue[0];
-      const parts = [];
-      i++;
-
-      while (i < headerLines.length) {
-        const next = headerLines[i].replace(/\t/g, "  ");
-
-        if (/^[A-Za-z0-9_-]+:\s*/.test(next)) break;
-
-        if (!next.trim()) {
-          parts.push("");
-          i++;
-          continue;
-        }
-
-        if (!/^\s+/.test(next)) break;
-
-        parts.push(next.replace(/^\s+/, ""));
-        i++;
-      }
-
-      if (style === ">") {
-        const paragraphs = [];
-        let current = [];
-
-        for (const part of parts) {
-          if (part === "") {
-            if (current.length) {
-              paragraphs.push(current.join(" "));
-              current = [];
-            }
-          } else {
-            current.push(part);
-          }
-        }
-
-        if (current.length) paragraphs.push(current.join(" "));
-        data[key] = paragraphs.join("\n\n").trim();
-      } else {
-        data[key] = parts.join("\n").trim();
-      }
-
-      continue;
-    }
-
-    // Valor vacío: puede ser lista YAML.
-    if (rawValue === "") {
-      const items = [];
-      let j = i + 1;
-
-      while (j < headerLines.length) {
-        const next = headerLines[j].replace(/\t/g, "  ");
-        const listMatch = next.match(/^\s*-\s+(.*)$/);
-
-        if (listMatch) {
-          items.push(stripQuotes(listMatch[1]));
-          j++;
-          continue;
-        }
-
-        if (!next.trim()) {
-          j++;
-          continue;
-        }
-
-        break;
-      }
-
-      if (items.length) {
-        data[key] = items;
-        i = j;
-        continue;
-      }
-
-      data[key] = "";
-      i++;
-      continue;
-    }
-
-    if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
-      data[key] = rawValue.slice(1, -1)
+    if (value === "true") data[key] = true;
+    else if (value === "false") data[key] = false;
+    else if (value.startsWith("[") && value.endsWith("]")) {
+      data[key] = value.slice(1, -1)
         .split(",")
         .map(v => stripQuotes(v))
         .filter(Boolean);
-      i++;
-      continue;
+    } else {
+      data[key] = stripQuotes(value);
     }
-
-    if (rawValue === "true") {
-      data[key] = true;
-      i++;
-      continue;
-    }
-
-    if (rawValue === "false") {
-      data[key] = false;
-      i++;
-      continue;
-    }
-
-    // Soporta valores largos que Decap/YAML divide físicamente en varias líneas.
-    const scalarParts = [rawValue];
-    let j = i + 1;
-
-    while (j < headerLines.length) {
-      const next = headerLines[j].replace(/\t/g, "  ");
-
-      if (/^[A-Za-z0-9_-]+:\s*/.test(next)) break;
-      if (/^\s*-\s+/.test(next)) break;
-
-      if (!next.trim()) {
-        j++;
-        continue;
-      }
-
-      if (/^\s+/.test(next)) {
-        scalarParts.push(next.trim());
-        j++;
-        continue;
-      }
-
-      break;
-    }
-
-    data[key] = stripQuotes(scalarParts.join(" ").trim());
-    i = j;
   }
 
   return { data, body };
@@ -559,6 +447,15 @@ function documentHtml({ title, description, canonical, body, extraHead = "" }) {
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:url" content="${escapeHtml(canonical)}">
+  <meta property="og:site_name" content="Ramos Arizpe al Día">
+  <meta name="application-name" content="Ramos Arizpe al Día">
+  <meta name="apple-mobile-web-app-title" content="Ramos Arizpe al Día">
+  <meta name="theme-color" content="#1687e8">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700;8..60,800&display=swap" rel="stylesheet">
@@ -938,6 +835,13 @@ function main() {
   copyFileIfExists("styles.css");
   copyFileIfExists("script.js");
   copyFileIfExists("logo-ramos-arizpe-al-dia.jpg");
+  copyFileIfExists("favicon.ico");
+  copyFileIfExists("favicon-16.png");
+  copyFileIfExists("favicon-32.png");
+  copyFileIfExists("favicon-192.png");
+  copyFileIfExists("favicon-512.png");
+  copyFileIfExists("apple-touch-icon.png");
+  copyFileIfExists("site.webmanifest");
   copyDirIfExists("uploads");
   copyDirIfExists("admin");
 
