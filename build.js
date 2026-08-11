@@ -24,6 +24,34 @@ function slugify(value = "") {
     .replace(/^-+|-+$/g, "");
 }
 
+function parseDate(value) {
+  if (!value) return new Date();
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+  const raw = String(value).trim();
+
+  const direct = new Date(raw);
+  if (!Number.isNaN(direct.getTime())) return direct;
+
+  const mx = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?$/);
+  if (mx) {
+    const [, dd, mm, yyyy, hh = "00", min = "00"] = mx;
+    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), 0);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+
+  const ymd = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?$/);
+  if (ymd) {
+    const [, yyyy, mm, dd, hh = "00", min = "00"] = ymd;
+    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), 0);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+
+  console.warn("Fecha no reconocida:", raw, "— se usará la fecha actual para evitar que falle el despliegue.");
+  return new Date();
+}
+
 function copyFile(name) {
   const src = path.join(root, name);
   if (fs.existsSync(src)) {
@@ -41,7 +69,7 @@ function copyDir(name) {
 }
 
 function formatDate(dateValue, withTime = false) {
-  const d = new Date(dateValue);
+  const d = parseDate(dateValue);
   if (Number.isNaN(d.getTime())) return "";
   return new Intl.DateTimeFormat("es-MX", {
     day: "numeric",
@@ -83,7 +111,7 @@ function loadNotes() {
         slug: base
       };
     })
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+    .sort((a, b) => parseDate(b.date) - parseDate(a.date));
 }
 
 function renderLead(notes) {
@@ -115,7 +143,7 @@ function renderLead(notes) {
     </article>` : "";
 
   const minuteHtml = minute.map(n => {
-    const d = new Date(n.date);
+    const d = parseDate(n.date);
     const time = Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
     return `<article><time>${esc(time)}</time><div><span>${esc(n.category)}</span><h3><a href="${articleURL(n)}">${esc(n.title)}</a></h3></div></article>`;
   }).join("\n");
@@ -167,7 +195,7 @@ function articlePage(note) {
   const canonical = `https://ramosarizpealdia.com${articleURL(note)}`;
   const image = note.image ? `https://ramosarizpealdia.com${note.image.startsWith("/") ? note.image : "/" + note.image}` : "https://ramosarizpealdia.com/logo-ramos-arizpe-al-dia.jpg";
   const bodyHtml = marked.parse(note.body || "");
-  const published = new Date(note.date).toISOString();
+  const published = parseDate(note.date).toISOString();
 
   const schema = {
     "@context": "https://schema.org",
@@ -242,19 +270,19 @@ function articlePage(note) {
 function buildSitemaps(notes) {
   const urls = [
     `<url><loc>https://ramosarizpealdia.com/</loc></url>`,
-    ...notes.map(n => `<url><loc>https://ramosarizpealdia.com${articleURL(n)}</loc><lastmod>${new Date(n.date).toISOString()}</lastmod></url>`)
+    ...notes.map(n => `<url><loc>https://ramosarizpealdia.com${articleURL(n)}</loc><lastmod>${parseDate(n.date).toISOString()}</lastmod></url>`)
   ];
   fs.writeFileSync(path.join(dist, "sitemap.xml"),
     `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`
   );
 
   const cutoff = Date.now() - 2 * 24 * 60 * 60 * 1000;
-  const recent = notes.filter(n => new Date(n.date).getTime() >= cutoff);
+  const recent = notes.filter(n => parseDate(n.date).getTime() >= cutoff);
   const news = recent.map(n => `<url>
     <loc>https://ramosarizpealdia.com${articleURL(n)}</loc>
     <news:news>
       <news:publication><news:name>Ramos Arizpe al Día</news:name><news:language>es</news:language></news:publication>
-      <news:publication_date>${new Date(n.date).toISOString()}</news:publication_date>
+      <news:publication_date>${parseDate(n.date).toISOString()}</news:publication_date>
       <news:title>${esc(n.title)}</news:title>
     </news:news>
   </url>`);
