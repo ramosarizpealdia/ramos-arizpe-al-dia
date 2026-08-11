@@ -36,7 +36,7 @@ collections:
       - label: Sección principal
         name: category
         widget: select
-        hint: "Elige la sección principal. Esta definirá la URL y la etiqueta principal de la nota."
+        hint: "Define la URL principal de la nota."
         options:
           - México
           - Coahuila
@@ -54,7 +54,7 @@ collections:
         widget: select
         multiple: true
         required: false
-        hint: "Opcional. Puedes elegir una o varias secciones adicionales para que la misma nota aparezca también ahí."
+        hint: "Opcional: la misma nota puede aparecer en varias secciones sin duplicarse."
         options:
           - México
           - Coahuila
@@ -75,9 +75,11 @@ collections:
         name: date
         widget: datetime
         default: "{{now}}"
+        date_format: "DD/MM/YYYY"
+        time_format: "HH:mm"
         format: "YYYY-MM-DDTHH:mm:ssZ"
         picker_utc: false
-        hint: "Usa la fecha y hora de Ramos Arizpe al momento de publicar."
+        hint: "La fecha queda guardada con zona horaria; el sitio nunca la sustituye por la hora del build."
       - label: Imagen principal
         name: image
         widget: image
