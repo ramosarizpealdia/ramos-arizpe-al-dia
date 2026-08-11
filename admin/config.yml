@@ -33,6 +33,7 @@ collections:
         name: summary
         widget: text
         required: false
+        hint: "Se muestra debajo del título de la noticia y resume el dato principal."
       - label: Sección principal
         name: category
         widget: select
@@ -84,6 +85,11 @@ collections:
         name: image
         widget: image
         required: false
+      - label: Pie de foto
+        name: image_caption
+        widget: text
+        required: false
+        hint: "Describe brevemente lo que aparece en la fotografía. Este texto se mostrará debajo de la imagen dentro de la nota."
       - label: Destacar en portada
         name: featured
         widget: boolean
