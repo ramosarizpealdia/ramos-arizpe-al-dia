@@ -1,6 +1,10 @@
 backend:
-  name: git-gateway
+  name: github
+  repo: ramosarizpealdia/ramos-arizpe-al-dia
   branch: main
+  base_url: https://ramos-arizpe-al-dia.pages.dev
+  auth_endpoint: /api/auth
+  site_domain: ramos-arizpe-al-dia.pages.dev
 
 site_url: https://ramosarizpealdia.com
 display_url: https://ramosarizpealdia.com
