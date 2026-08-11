@@ -534,6 +534,24 @@ fs.mkdirSync(dist, { recursive: true });
 const notes = loadNotes();
 let home = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
+// Convierte los enlaces internos del menú de la portada en páginas reales de sección.
+// Esto se hace sobre el HTML ya cargado, para que sí afecte a la portada publicada.
+const homeNavRoutes = {
+  "#mexico": "/mexico/",
+  "#politica": "/politica/",
+  "#economia": "/economia/",
+  "#seguridad": "/seguridad/",
+  "#estados": "/estados/",
+  "#mundo": "/mundo/",
+  "#coahuila": "/coahuila/",
+  "#ramos": "/ramos-arizpe/",
+  "#opinion": "/opinion/"
+};
+
+for (const [anchor, route] of Object.entries(homeNavRoutes)) {
+  home = home.replaceAll(`href="${anchor}"`, `href="${route}"`);
+}
+
 const lead = renderLead(notes);
 if (lead) {
   home = home.replace(/<section class="container lead-grid" id="mexico">[\s\S]*?<\/section>/, lead);
