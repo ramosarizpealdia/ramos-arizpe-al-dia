@@ -614,20 +614,47 @@ home = home.replace(
   professionalNav
 );
 
-const lead = renderLead(notes);
-if (lead) {
-  home = home.replace(/<section class="container lead-grid" id="mexico">[\s\S]*?<\/section>/, lead);
-  const latest = renderLatest(notes);
-  home = home.replace('<div class="container rule"></div>', `${latest}<div class="container rule"></div>`);
+function replaceHomeBlock(html, startMarker, nextMarker, replacement) {
+  const start = html.indexOf(startMarker);
+  const end = html.indexOf(nextMarker, start + startMarker.length);
+  if (start === -1 || end === -1) return html;
+  const cleanReplacement = replacement ? `${replacement}
+` : "";
+  return html.slice(0, start) + cleanReplacement + html.slice(end);
 }
 
-// Sustituye los módulos de demostración por noticias reales según categoría.
-home = home.replace(/<section class="container section-block" id="coahuila">[\s\S]*?<\/section>/, renderCoahuilaSection(notes));
-home = home.replace(/<section class="dark-band" id="seguridad">[\s\S]*?<\/section>/, renderSecuritySection(notes));
-home = home.replace(/<section class="container split-sections">[\s\S]*?<\/section>/, renderPoliticsEconomySection(notes));
-home = home.replace(/<section class="container opinion" id="opinion">[\s\S]*?<\/section>/, renderOpinionSection(notes));
+const lead = renderLead(notes);
+const latest = renderLatest(notes);
+if (lead) {
+  home = replaceHomeBlock(home,
+    '<section class="container lead-grid" id="mexico">',
+    '<div class="container rule"></div>',
+    `${lead}
+${latest}`
+  );
+}
 
-// México, Estados y Mundo se agregan como módulos reales cuando haya contenido.
+home = replaceHomeBlock(home,
+  '<section class="container section-block" id="coahuila">',
+  '<section class="dark-band" id="seguridad">',
+  renderCoahuilaSection(notes)
+);
+home = replaceHomeBlock(home,
+  '<section class="dark-band" id="seguridad">',
+  '<section class="container split-sections">',
+  renderSecuritySection(notes)
+);
+home = replaceHomeBlock(home,
+  '<section class="container split-sections">',
+  '<section class="container opinion" id="opinion">',
+  renderPoliticsEconomySection(notes)
+);
+home = replaceHomeBlock(home,
+  '<section class="container opinion" id="opinion">',
+  '<section class="newsletter">',
+  renderOpinionSection(notes)
+);
+
 const nationalExtras = renderNationalExtraSections(notes);
 if (nationalExtras) {
   home = home.replace('<section class="newsletter">', `${nationalExtras}<section class="newsletter">`);
@@ -638,7 +665,7 @@ fs.writeFileSync(path.join(dist, "index.html"), home);
 const extraCss = `
 /* Contenido generado automáticamente desde /admin */
 .lead-story>a,.secondary-story>a,.generated-news-card>a{color:inherit;text-decoration:none;display:block}
-.article-cover{width:100%;height:100%;object-fit:cover;display:block}
+.article-cover{width:100%;object-fit:cover;display:block}
 .generated-latest{padding-top:24px;padding-bottom:55px}
 .generated-news-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
 .generated-news-card{border-top:1px solid #d7d7d7;padding-top:14px}
@@ -649,9 +676,9 @@ const extraCss = `
 .article-breadcrumb{font-size:13px;color:#6c6c6c;margin-bottom:24px}
 .article-sections{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px}
 .article-sections .section-label{display:inline-block;text-decoration:none}
-.professional-nav{display:flex;align-items:center;gap:0;overflow:visible}
+.professional-nav{display:flex;align-items:center;justify-content:center;gap:27px;overflow:visible}
 .professional-nav .nav-more{position:relative;display:flex;align-items:stretch}
-.professional-nav .nav-more-button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;padding:inherit;cursor:pointer;height:100%}
+.professional-nav .nav-more-button{appearance:none;border:0;border-bottom:3px solid transparent;background:transparent;color:inherit;font:inherit;font-weight:inherit;text-transform:uppercase;letter-spacing:.25px;padding:15px 0 12px;cursor:pointer;height:100%}
 .professional-nav .nav-more-menu{display:none;position:absolute;top:100%;right:0;min-width:190px;background:#fff;border:1px solid #e3e3e3;box-shadow:0 10px 24px rgba(0,0,0,.12);z-index:50}
 .professional-nav .nav-more-menu a{display:block;white-space:nowrap;padding:12px 16px;color:#111;background:#fff}
 .professional-nav .nav-more-menu a:hover{background:#f4f4f4}
@@ -676,84 +703,13 @@ const extraCss = `
 .regional-stack article .thumb.article-cover{object-fit:cover}
 .dark-feature .article-cover,.wide-story .article-cover{object-fit:cover}
 .dark-card.empty-editorial{display:flex;align-items:center;justify-content:center;min-height:140px;opacity:.55}
+/* Protección puntual para textos largos sin modificar la retícula original */
+.lead-story,.lead-secondary,.minute-column,.regional-feature,.regional-stack,.dark-feature,.dark-card,.split-main,.split-side{min-width:0}
+.lead-story h1,.secondary-story h2,.minute-column h3,.regional-feature h3,.regional-stack h4,.dark-feature h3,.dark-card h4,.wide-story h3,.economy-lead h3{overflow-wrap:anywhere;word-break:normal}
+.dark-feature>a{display:block}
+.newsletter{clear:both;position:relative}
 
-/* Corrección mínima de flujo: conserva el diseño editorial original */
-.section-block,
-.dark-band,
-.split-sections,
-.opinion,
-.generated-category-section,
-.latest{
-  position:relative;
-  clear:both;
-  overflow:visible;
-}
 
-.section-block::after,
-.dark-band::after,
-.split-sections::after,
-.opinion::after,
-.generated-category-section::after,
-.latest::after{
-  content:"";
-  display:block;
-  clear:both;
-}
-
-/* Evita que textos largos invadan el módulo siguiente sin cambiar columnas */
-.section-block h1,
-.section-block h2,
-.section-block h3,
-.section-block h4,
-.dark-band h1,
-.dark-band h2,
-.dark-band h3,
-.dark-band h4,
-.split-sections h1,
-.split-sections h2,
-.split-sections h3,
-.split-sections h4,
-.opinion h1,
-.opinion h2,
-.opinion h3,
-.opinion h4,
-.generated-category-section h1,
-.generated-category-section h2,
-.generated-category-section h3,
-.generated-category-section h4,
-.latest h1,
-.latest h2,
-.latest h3,
-.latest h4{
-  overflow-wrap:anywhere;
-  word-break:normal;
-}
-
-/* Las imágenes no pueden desbordar su tarjeta */
-.section-block img,
-.dark-band img,
-.split-sections img,
-.opinion img,
-.generated-category-section img,
-.latest img{
-  max-width:100%;
-}
-
-/* Espacio de seguridad entre módulos, sin alterar su composición interna */
-.section-block,
-.dark-band,
-.split-sections,
-.opinion,
-.generated-category-section,
-.latest{
-  margin-bottom:28px;
-}
-
-.newsletter{
-  clear:both;
-  position:relative;
-  z-index:1;
-}
 .generated-category-section{padding-top:38px;padding-bottom:48px;border-top:1px solid #e3e3e3}
 .category-page{padding-top:48px;padding-bottom:80px}
 .category-page .section-header h1{font-family:"Source Serif 4",Georgia,serif;font-size:48px;margin:0}
