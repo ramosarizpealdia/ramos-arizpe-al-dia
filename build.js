@@ -673,35 +673,64 @@ if (nationalExtras) {
   home = home.replace('<section class="newsletter">', `${nationalExtras}<section class="newsletter">`);
 }
 
+
+function removeContainingSectionByPhrase(html, phrase) {
+  const phraseIndex = html.indexOf(phrase);
+  if (phraseIndex === -1) return html;
+
+  const sectionStart = html.lastIndexOf("<section", phraseIndex);
+  if (sectionStart === -1) return html;
+
+  const tagRegex = /<\/?section\b[^>]*>/gi;
+  tagRegex.lastIndex = sectionStart;
+
+  let depth = 0;
+  let match;
+
+  while ((match = tagRegex.exec(html)) !== null) {
+    const tag = match[0];
+    if (/^<section\b/i.test(tag)) {
+      depth += 1;
+    } else {
+      depth -= 1;
+      if (depth === 0) {
+        const sectionEnd = tagRegex.lastIndex;
+        return html.slice(0, sectionStart) + html.slice(sectionEnd);
+      }
+    }
+  }
+
+  return html;
+}
+
 // Limpieza final determinista de la portada.
 // Esta etapa corre DESPUÉS de construir todas las secciones y evita que cualquier
 // bloque de demostración del index.html original llegue al sitio publicado.
 
-// Política + Economía: si no existen notas reales en esas categorías, elimina TODO el módulo.
-// Usamos posiciones reales del HTML en vez de regex porque este módulo contiene estructura anidada.
+// Política + Economía: si no existen notas reales, elimina estructuralmente
+// la sección que contiene los textos de demostración, aunque su marcado haya cambiado.
 if (!categoryNotes(notes, "Política").length && !categoryNotes(notes, "Economía").length) {
-  const splitStart = home.indexOf('<section class="container split-sections">');
-  if (splitStart !== -1) {
-    let splitEnd = home.indexOf('<section class="container opinion" id="opinion">', splitStart);
-    if (splitEnd === -1) {
-      splitEnd = home.indexOf('<section class="newsletter">', splitStart);
-    }
-    if (splitEnd !== -1) {
-      home = home.slice(0, splitStart) + home.slice(splitEnd);
-      console.log("Módulo demo Política/Economía eliminado correctamente.");
-    }
+  const before = home;
+  home = removeContainingSectionByPhrase(
+    home,
+    "La cobertura política se presenta con jerarquía editorial y enfoque informativo"
+  );
+
+  if (home !== before) {
+    console.log("Módulo demo Política/Economía eliminado estructuralmente.");
   }
 }
 
-// Opinión: si no existen notas reales, elimina el módulo de demostración.
+// Opinión: si no existen notas reales, elimina estructuralmente el módulo demo.
 if (!categoryNotes(notes, "Opinión").length) {
-  const opinionStart = home.indexOf('<section class="container opinion" id="opinion">');
-  if (opinionStart !== -1) {
-    const opinionEnd = home.indexOf('<section class="newsletter">', opinionStart);
-    if (opinionEnd !== -1) {
-      home = home.slice(0, opinionStart) + home.slice(opinionEnd);
-      console.log("Módulo demo Opinión eliminado correctamente.");
-    }
+  const before = home;
+  home = removeContainingSectionByPhrase(
+    home,
+    "La conversación pública también necesita contexto, argumentos y perspectiva"
+  );
+
+  if (home !== before) {
+    console.log("Módulo demo Opinión eliminado estructuralmente.");
   }
 }
 
