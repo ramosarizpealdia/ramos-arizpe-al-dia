@@ -1,0 +1,14 @@
+/admin/*
+  Cache-Control: no-store, no-cache, must-revalidate
+
+/api/*
+  Cache-Control: no-store
+
+/styles.css
+  Cache-Control: no-cache
+
+/script.js
+  Cache-Control: no-cache
+
+/uploads/*
+  Cache-Control: public, max-age=3600
