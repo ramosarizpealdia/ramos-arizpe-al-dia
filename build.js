@@ -569,9 +569,9 @@ function documentHtml({ title, description, canonical, body, extraHead = "" }) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700;8..60,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=parche-textos-20260811">
+  <link rel="stylesheet" href="/styles.css?v=articulos-pro-20260811">
   ${extraHead}
-  <script defer src="/script.js?v=parche-textos-20260811"></script>
+  <script defer src="/script.js?v=articulos-pro-20260811"></script>
 </head>
 <body>
 ${headerHtml()}
@@ -780,7 +780,111 @@ function categoryPage(category, notes) {
   });
 }
 
-function articlePage(note) {
+
+function relatedCandidates(note, notes) {
+  const others = notes.filter(item => item !== note);
+
+  // Primero prioriza notas que compartan alguna sección.
+  const related = others.filter(item =>
+    item.sections.some(section => note.sections.includes(section))
+  );
+
+  // Después completa con las más recientes, sin duplicados.
+  const merged = [...related, ...others];
+  const seen = new Set();
+
+  return merged.filter(item => {
+    const key = `${item.category}/${item.slug}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function insertAfterParagraphs(html, block, paragraphCount = 2) {
+  if (!html || !block) return html;
+
+  let count = 0;
+  let index = -1;
+  const re = /<\/p>/gi;
+  let match;
+
+  while ((match = re.exec(html))) {
+    count++;
+    if (count === paragraphCount) {
+      index = match.index + match[0].length;
+      break;
+    }
+  }
+
+  // Si la nota tiene menos párrafos, coloca el bloque al final del cuerpo.
+  if (index === -1) return `${html}${block}`;
+  return `${html.slice(0, index)}${block}${html.slice(index)}`;
+}
+
+function inlineInterestHtml(note) {
+  return `<aside class="inline-interest" aria-label="Te puede interesar">
+    <span class="inline-interest-label">TE PUEDE INTERESAR</span>
+    <a href="${articleUrl(note)}">
+      ${note.image ? `<img src="${escapeHtml(note.image)}" alt="${escapeHtml(note.title)}" loading="lazy">` : ""}
+      <div>
+        <span class="section-label">${escapeHtml(note.category)}</span>
+        <strong>${escapeHtml(note.title)}</strong>
+      </div>
+    </a>
+  </aside>`;
+}
+
+function articleSidebarHtml(note, notes) {
+  const recent = notes.filter(item => item !== note).slice(0, 5);
+  if (!recent.length) return "";
+
+  return `<aside class="article-sidebar">
+    <div class="sidebar-module">
+      <div class="sidebar-heading"><span>ACTUALIDAD</span><h2>Lo más reciente</h2></div>
+      <div class="sidebar-list">
+        ${recent.map((item, index) => `<article>
+          <span class="sidebar-number">${String(index + 1).padStart(2, "0")}</span>
+          <div>
+            <span class="section-label">${escapeHtml(item.category)}</span>
+            <h3><a href="${articleUrl(item)}">${escapeHtml(item.title)}</a></h3>
+          </div>
+        </article>`).join("")}
+      </div>
+      <a class="sidebar-more" href="/ultimas/">Ver todas las noticias →</a>
+    </div>
+
+    <div class="sidebar-follow">
+      <span>SÍGUENOS</span>
+      <strong>Ramos Arizpe al Día</strong>
+      <p>Recibe nuestras publicaciones y cobertura informativa en Facebook.</p>
+      <a href="https://www.facebook.com/share/1CWiSRPs4B/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">Ir a Facebook</a>
+    </div>
+  </aside>`;
+}
+
+function relatedFooterHtml(note, notes) {
+  const related = relatedCandidates(note, notes).slice(0, 3);
+  if (!related.length) return "";
+
+  return `<section class="article-related">
+    <div class="article-related-head">
+      <span class="section-kicker">CONTINÚA LEYENDO</span>
+      <h2>Más noticias que te pueden interesar</h2>
+    </div>
+    <div class="article-related-grid">
+      ${related.map(item => `<article>
+        <a href="${articleUrl(item)}">
+          ${img(item, "article-related-image", "FOTO")}
+          <span class="section-label">${escapeHtml(item.category)}</span>
+          <h3>${escapeHtml(item.title)}</h3>
+        </a>
+      </article>`).join("")}
+    </div>
+  </section>`;
+}
+
+function articlePage(note, notes) {
   const canonical = `${SITE_URL}${articleUrl(note)}`;
   const imageUrl = note.image
     ? (/^https?:\/\//i.test(note.image) ? note.image : `${SITE_URL}${note.image}`)
@@ -803,6 +907,13 @@ function articlePage(note) {
     }
   };
 
+  const candidates = relatedCandidates(note, notes);
+  const inlineRelated = candidates[0];
+  const renderedBody = renderMarkdown(note.body);
+  const bodyWithInterest = inlineRelated
+    ? insertAfterParagraphs(renderedBody, inlineInterestHtml(inlineRelated), 2)
+    : renderedBody;
+
   return documentHtml({
     title: `${note.title} | Ramos Arizpe al Día`,
     description: note.summary || note.title,
@@ -811,19 +922,23 @@ function articlePage(note) {
   <meta property="og:image" content="${escapeHtml(imageUrl)}">
   <meta property="article:published_time" content="${escapeHtml(note.published.toISOString())}">
   <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`,
-    body: `<main>
-      <article class="container article-page">
-        <div class="breadcrumb"><a href="/">Inicio</a> / <a href="/${slugify(note.category)}/">${escapeHtml(note.category)}</a></div>
-        <div class="article-sections">${note.sections.map(section => `<a href="/${slugify(section)}/">${escapeHtml(section)}</a>`).join("")}</div>
-        <h1>${escapeHtml(note.title)}</h1>
-        ${note.summary ? `<p class="article-deck">${escapeHtml(note.summary)}</p>` : ""}
-        <div class="article-meta">Por <strong>${escapeHtml(note.author)}</strong> · ${escapeHtml(formatDate(note.published, true))}</div>
-        ${note.image && (!localAssetFile(note.image) || fs.existsSync(localAssetFile(note.image))) ? `<figure class="article-media">
-          <img class="article-hero" src="${escapeHtml(note.image)}" alt="${escapeHtml(note.imageCaption || note.title)}">
-          ${note.imageCaption ? `<figcaption>${escapeHtml(note.imageCaption)}</figcaption>` : ""}
-        </figure>` : ""}
-        <div class="article-body">${renderMarkdown(note.body)}</div>
-      </article>
+    body: `<main class="article-main">
+      <div class="container article-shell">
+        <article class="article-page">
+          <div class="breadcrumb"><a href="/">Inicio</a> / <a href="/${slugify(note.category)}/">${escapeHtml(note.category)}</a></div>
+          <div class="article-sections">${note.sections.map(section => `<a href="/${slugify(section)}/">${escapeHtml(section)}</a>`).join("")}</div>
+          <h1>${escapeHtml(note.title)}</h1>
+          ${note.summary ? `<p class="article-deck">${escapeHtml(note.summary)}</p>` : ""}
+          <div class="article-meta">Por <strong>${escapeHtml(note.author)}</strong> · ${escapeHtml(formatDate(note.published, true))}</div>
+          ${note.image && (!localAssetFile(note.image) || fs.existsSync(localAssetFile(note.image))) ? `<figure class="article-media">
+            <img class="article-hero" src="${escapeHtml(note.image)}" alt="${escapeHtml(note.imageCaption || note.title)}">
+            ${note.imageCaption ? `<figcaption>${escapeHtml(note.imageCaption)}</figcaption>` : ""}
+          </figure>` : ""}
+          <div class="article-body">${bodyWithInterest}</div>
+          ${relatedFooterHtml(note, notes)}
+        </article>
+        ${articleSidebarHtml(note, notes)}
+      </div>
     </main>`
   });
 }
@@ -975,7 +1090,7 @@ function main() {
   }
 
   for (const note of notes) {
-    writeFile(`${slugify(note.category)}/${note.slug}/index.html`, articlePage(note));
+    writeFile(`${slugify(note.category)}/${note.slug}/index.html`, articlePage(note, notes));
   }
 
   writeFile("quienes-somos/index.html", simplePage(
