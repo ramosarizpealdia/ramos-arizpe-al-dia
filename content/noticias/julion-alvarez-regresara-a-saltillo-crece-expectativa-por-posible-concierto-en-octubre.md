@@ -31,7 +31,7 @@ Una de las posibilidades que circula en redes sociales apunta hacia el **Rodeo 
 
 Sin embargo, **hasta este miércoles 12 de agosto no existe una confirmación oficial de que Julión Álvarez forme parte de la cartelera del Rodeo Saltillo 2026**. Por ello, cualquier fecha o presentación atribuida al cantante en este evento debe considerarse por ahora como una versión no confirmada.
 
-### Julión Álvarez ya estuvo recientemente en Saltillo
+### **Julión Álvarez ya estuvo recientemente en Saltillo**
 
 De concretarse una nueva presentación, significaría el regreso del cantante a la capital de Coahuila menos de un año después de su anterior concierto en la ciudad.
 
@@ -39,7 +39,7 @@ La presentación más reciente que pudo verificarse ocurrió el **7 de noviembr
 
 Ese antecedente también ayuda a explicar la expectativa que provoca la posibilidad de tener nuevamente al cantante en Saltillo.
 
-### ¿Quién es Julión Álvarez?
+### **¿Quién es Julión Álvarez?**
 
 Su nombre completo es **Julio César Álvarez Montelongo** y nació el 11 de abril de 1983 en La Concordia, Chiapas. Es una de las figuras más reconocidas de la música regional mexicana y ha desarrollado una carrera marcada principalmente por los sonidos de banda y norteño. 
 
@@ -51,7 +51,7 @@ Su capacidad para reunir grandes cantidades de público y agotar localidades en 
 
 Su poder de convocatoria ha llegado también a grandes escenarios internacionales. En 2025 consiguió realizar **tres presentaciones consecutivas en el SoFi Stadium de Los Ángeles**, una marca destacada para un artista latino en ese recinto. 
 
-### Julión Álvarez mantiene música nueva en 2026
+### **Julión Álvarez mantiene música nueva en 2026**
 
 El cantante también ha mantenido actividad discográfica durante este año. Entre sus lanzamientos de 2026 aparecen canciones como **“Bendición”, “Te Fuiste Quedando”, “Ni Cómo Pedirte Que Te Quedes”** y temas pertenecientes al material *Ya No Sé Fingir*. 
 
