@@ -9,7 +9,7 @@ sections:
   - Saltillo
   - Región Sureste
   - Coahuila
-author: "Alejandro Recendiz "
+author: Alexander Feria
 date: 2026-08-11T18:23:00-06:00
 image: /uploads/concepciones-del-estado.jpeg
 image_caption: Vecinos de Nuevo Mirasierra difundieron imágenes captadas por
