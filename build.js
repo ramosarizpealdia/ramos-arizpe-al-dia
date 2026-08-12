@@ -573,9 +573,9 @@ function documentHtml({ title, description, canonical, body, extraHead = "" }) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700;8..60,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=manual-interest-20260811">
+  <link rel="stylesheet" href="/styles.css?v=interes-pie-v2-20260811">
   ${extraHead}
-  <script defer src="/script.js?v=manual-interest-20260811"></script>
+  <script defer src="/script.js?v=interes-pie-v2-20260811"></script>
 </head>
 <body>
 ${headerHtml()}
