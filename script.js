@@ -22,7 +22,6 @@ document.addEventListener("DOMContentLoaded", () => {
     button.addEventListener("click", event => {
       event.preventDefault();
       event.stopPropagation();
-
       const willOpen = panel.hidden;
 
       document.querySelectorAll(".nav-more").forEach(other => {
@@ -58,4 +57,43 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") closeMoreMenus();
   });
+
+  // Registra automáticamente una visita cuando se abre una nota.
+  const article = document.querySelector(".article-page");
+
+  if (article) {
+    const pathname = window.location.pathname;
+    const parts = pathname.split("/").filter(Boolean);
+    const slug = parts.length ? parts[parts.length - 1] : "";
+
+    const title =
+      article.querySelector("h1")?.textContent?.trim() || document.title;
+
+    const category =
+      article.querySelector(".breadcrumb a:nth-of-type(2)")?.textContent?.trim() ||
+      article.querySelector(".article-sections a")?.textContent?.trim() ||
+      "";
+
+    const hero = article.querySelector(".article-hero");
+    const image = hero ? hero.getAttribute("src") || "" : "";
+
+    if (slug && title && category) {
+      fetch("/api/views", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          slug,
+          category,
+          title,
+          url: pathname,
+          image
+        }),
+        keepalive: true
+      }).catch(() => {
+        // Si el contador falla, la lectura de la nota continúa normalmente.
+      });
+    }
+  }
 });
