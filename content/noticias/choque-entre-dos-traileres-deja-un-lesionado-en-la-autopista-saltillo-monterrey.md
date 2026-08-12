@@ -13,6 +13,10 @@ image: /uploads/concepciones-del-estado.png
 image_caption: Dos tractocamiones estuvieron involucrados en un accidente a la
   altura del kilómetro 80 de la autopista Saltillo-Monterrey, en Santa Catarina,
   Nuevo León.
+related_title: Azucena “N” queda en prisión preventiva por la muerte de Johan en Saltillo
+related_url: https://ramosarizpealdia.com/saltillo/azucena-n-queda-en-prision-preventiva-por-la-muerte-de-johan-en-saltillo/
+related_image: /uploads/concepciones-del-estado-2.jpg
+related_after: 2
 featured: false
 ---
 Un accidente entre **dos tractocamiones** movilizó la mañana de este miércoles a cuerpos de emergencia sobre la **autopista Saltillo-Monterrey**, a la altura del kilómetro 80, en el municipio de Santa Catarina, Nuevo León.
