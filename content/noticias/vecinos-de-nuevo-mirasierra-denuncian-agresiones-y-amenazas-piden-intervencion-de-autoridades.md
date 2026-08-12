@@ -15,6 +15,11 @@ image: /uploads/concepciones-del-estado.jpeg
 image_caption: Vecinos de Nuevo Mirasierra difundieron imágenes captadas por
   cámaras de seguridad como parte de las denuncias sobre incidentes registrados
   en la calle Cacomixtle.
+related_title: Instalan validadores en rutas urbanas de Ramos Arizpe para
+  aplicar tarifas preferenciales
+related_url: https://ramosarizpealdia.com/ramos-arizpe/instalan-validadores-en-rutas-urbanas-de-ramos-arizpe-para-aplicar-tarifas-preferenciales/
+related_image: /uploads/img_3899.jpg
+related_after: 3
 featured: true
 ---
 Habitantes de la colonia **Nuevo Mirasierra**, en Saltillo, denunciaron una serie de presuntas agresiones, amenazas y daños que atribuyen a un hombre conocido en el sector como **“El Chaparro”**, situación por la que solicitaron mayor intervención de las autoridades.
