@@ -10,7 +10,7 @@ sections:
   - Región Sureste
 author: Redacción
 date: 2026-08-12T11:02:00-06:00
-image: /uploads/concepciones-del-estado-2.jpg
+image: /uploads/3b-480c-9d48-39b1c839e676.jpg
 image_caption: Autoridades y directivos de Waelzholz participaron en la
   colocación de la primera piedra de la planta que representará una inversión de
   65 millones de dólares en Ramos Arizpe.
