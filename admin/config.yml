@@ -1,0 +1,103 @@
+backend:
+  name: github
+  repo: ramosarizpealdia/ramos-arizpe-al-dia
+  branch: main
+  base_url: https://ramos-arizpe-al-dia.pages.dev
+  auth_endpoint: /api/auth
+  site_domain: ramos-arizpe-al-dia.pages.dev
+
+site_url: https://ramosarizpealdia.com
+display_url: https://ramosarizpealdia.com
+
+media_folder: uploads
+public_folder: /uploads
+
+publish_mode: simple
+
+slug:
+  encoding: ascii
+  clean_accents: true
+  sanitize_replacement: "-"
+
+collections:
+  - name: noticias
+    label: Noticias
+    label_singular: Noticia
+    folder: content/noticias
+    create: true
+    extension: md
+    format: frontmatter
+    slug: "{{slug}}"
+    summary: "{{title}} — {{category}}"
+    fields:
+      - label: Título
+        name: title
+        widget: string
+      - label: Subtítulo / Bajada
+        name: summary
+        widget: text
+        required: false
+        hint: "Se muestra debajo del título de la noticia y resume el dato principal."
+      - label: Sección principal
+        name: category
+        widget: select
+        hint: "Define la URL principal de la nota."
+        options:
+          - México
+          - Coahuila
+          - Ramos Arizpe
+          - Saltillo
+          - Región Sureste
+          - Política
+          - Seguridad
+          - Economía
+          - Estados
+          - Mundo
+          - Opinión
+      - label: Mostrar también en
+        name: sections
+        widget: select
+        multiple: true
+        required: false
+        hint: "Opcional: la misma nota puede aparecer en varias secciones sin duplicarse."
+        options:
+          - México
+          - Coahuila
+          - Ramos Arizpe
+          - Saltillo
+          - Región Sureste
+          - Política
+          - Seguridad
+          - Economía
+          - Estados
+          - Mundo
+          - Opinión
+      - label: Autor
+        name: author
+        widget: string
+        default: "Ramos Arizpe al Día"
+      - label: Fecha y hora
+        name: date
+        widget: datetime
+        default: "{{now}}"
+        date_format: "DD/MM/YYYY"
+        time_format: "HH:mm"
+        format: "YYYY-MM-DDTHH:mm:ssZ"
+        picker_utc: false
+        hint: "La fecha queda guardada con zona horaria; el sitio nunca la sustituye por la hora del build."
+      - label: Imagen principal
+        name: image
+        widget: image
+        required: false
+      - label: Pie de foto
+        name: image_caption
+        widget: text
+        required: false
+        hint: "Describe brevemente lo que aparece en la fotografía. Este texto se mostrará debajo de la imagen dentro de la nota."
+      - label: Destacar en portada
+        name: featured
+        widget: boolean
+        default: false
+      - label: Contenido de la nota
+        name: body
+        widget: markdown
