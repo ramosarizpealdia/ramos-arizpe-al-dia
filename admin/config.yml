@@ -76,6 +76,12 @@ collections:
         name: author
         widget: string
         default: "Ramos Arizpe al Día"
+        hint: "Escribe el nombre de la persona que firma la nota. Cada autor tendrá automáticamente su página de perfil."
+      - label: URL del autor (opcional)
+        name: author_url
+        widget: string
+        required: false
+        hint: "Déjalo vacío para usar automáticamente /autor/nombre-del-autor/. Solo úsalo si ese autor debe enlazar a otra URL específica."
       - label: Fecha y hora
         name: date
         widget: datetime
