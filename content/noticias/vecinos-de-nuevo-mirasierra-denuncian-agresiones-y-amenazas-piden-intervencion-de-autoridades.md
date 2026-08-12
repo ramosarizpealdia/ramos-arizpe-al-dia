@@ -11,7 +11,7 @@ sections:
   - Coahuila
 author: "Alejandro Recendiz "
 date: 2026-08-11T18:23:00-06:00
-image: /uploads/img_3910.jpeg
+image: /uploads/concepciones-del-estado.jpeg
 image_caption: Vecinos de Nuevo Mirasierra difundieron imágenes captadas por
   cámaras de seguridad como parte de las denuncias sobre incidentes registrados
   en la calle Cacomixtle.
