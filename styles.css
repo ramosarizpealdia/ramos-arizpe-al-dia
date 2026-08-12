@@ -154,56 +154,50 @@ img{display:block;max-width:100%}
 }
 
 
-/* ===== ARTÍCULOS — DISEÑO EDITORIAL PROFESIONAL ===== */
-.article-sidebar{position:sticky;top:24px;padding-top:80px}
-.sidebar-module{border-top:4px solid var(--blue-dark)}
-.sidebar-heading{padding:14px 0 11px;border-bottom:1px solid var(--line)}
-.sidebar-heading span{font-size:9px;font-weight:800;letter-spacing:1px;color:var(--blue);text-transform:uppercase}
-.sidebar-heading h2{font:800 26px/1.05 var(--serif);margin:4px 0 0}
-.sidebar-list article{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
-.sidebar-number{font:800 18px/1 var(--serif);color:#b2b9c1;padding-top:3px}
-.sidebar-list h3{font:750 17px/1.15 var(--serif);margin:4px 0 0}
-.sidebar-more{display:block;padding:14px 0;font-size:11px;font-weight:800;color:var(--blue-deep)}
-.sidebar-follow{margin-top:34px;background:#081725;color:#fff;padding:23px}
-.sidebar-follow>span{display:block;font-size:9px;font-weight:800;letter-spacing:1px;color:#72bdff;margin-bottom:6px}
-.sidebar-follow strong{font:800 23px/1.05 var(--serif)}
-.sidebar-follow p{font-size:12px;line-height:1.5;color:#c0ceda;margin:11px 0 16px}
-.sidebar-follow a{display:inline-block;background:#fff;color:#081725;padding:9px 12px;font-size:11px;font-weight:800}
-
-.inline-interest{margin:30px 0 32px;padding:16px 0;border-top:3px solid var(--blue);border-bottom:1px solid var(--line);font-family:var(--sans)}
-.inline-interest-label{display:block;font-size:10px;font-weight:800;letter-spacing:1px;color:var(--blue-deep);margin-bottom:12px}
-.inline-interest>a{display:grid;grid-template-columns:132px 1fr;gap:16px;align-items:center;text-decoration:none!important;color:inherit!important}
-.inline-interest img{width:132px;height:82px;object-fit:cover}
-.inline-interest strong{display:block;font:750 20px/1.18 var(--serif);margin-top:4px}
-.inline-interest a:hover strong{color:var(--blue-deep)}
-
-.article-related{margin-top:52px;padding-top:25px;border-top:4px solid #111}
-.article-related-head{display:flex;justify-content:space-between;gap:25px;align-items:end;margin-bottom:20px}
-.article-related-head h2{font:800 29px/1.05 var(--serif);margin:4px 0 0}
-.article-related-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
-.article-related-image{width:100%;aspect-ratio:16/9;object-fit:cover;margin-bottom:11px}
-.article-related-grid h3{font:750 19px/1.12 var(--serif);margin:5px 0 0}
-
-@media(max-width:1050px){
-  .article-shell{grid-template-columns:minmax(0,1fr) 270px;gap:34px}
+/* TE PUEDE INTERESAR — CONTROL MANUAL */
+.manual-interest{
+  margin:30px 0 32px;
+  border-left:3px solid var(--blue);
+  background:#f7f8f9;
+  font-family:var(--sans);
 }
-
-@media(max-width:860px){
-  .article-shell{display:block;padding-top:34px}
-  .article-sidebar{position:static;padding-top:0;margin-top:45px}
-  .sidebar-module{margin-top:0}
-  .sidebar-list{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
-  .sidebar-more{border-bottom:1px solid var(--line)}
+.manual-interest>a{
+  display:grid;
+  grid-template-columns:180px minmax(0,1fr);
+  align-items:stretch;
+  color:inherit!important;
+  text-decoration:none!important;
 }
+.manual-interest img{
+  width:180px;
+  height:112px;
+  object-fit:cover;
+}
+.manual-interest-copy{
+  padding:16px 18px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+}
+.manual-interest-copy span{
+  font-size:10px;
+  line-height:1;
+  font-weight:800;
+  letter-spacing:1.15px;
+  color:var(--blue-deep);
+  margin-bottom:8px;
+}
+.manual-interest-copy strong{
+  font:750 21px/1.18 var(--serif);
+  overflow-wrap:anywhere;
+}
+.manual-interest>a:hover strong{color:var(--blue-deep)}
 
 @media(max-width:620px){
-  .article-shell{padding-bottom:60px}
-  .inline-interest>a{grid-template-columns:105px 1fr;gap:13px}
-  .inline-interest img{width:105px;height:72px}
-  .inline-interest strong{font-size:17px}
-  .article-related-grid{grid-template-columns:1fr}
-  .article-related-grid article{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:start}
-  .article-related-image{width:120px;height:78px;aspect-ratio:auto;margin:0}
-  .sidebar-list{grid-template-columns:1fr}
-  .article-sidebar{margin-top:36px}
+  .manual-interest>a{grid-template-columns:112px minmax(0,1fr)}
+  .manual-interest img{width:112px;height:86px}
+  .manual-interest-copy{padding:12px 13px}
+  .manual-interest-copy span{font-size:9px}
+  .manual-interest-copy strong{font-size:17px}
 }
