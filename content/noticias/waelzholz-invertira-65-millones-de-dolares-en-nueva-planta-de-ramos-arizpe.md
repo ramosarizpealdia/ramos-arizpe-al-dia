@@ -25,7 +25,7 @@ La producción estará dirigida a sectores como la **industria automotriz, movi
 
 El arranque de la construcción fue encabezado por el gobernador **Manolo Jiménez Salinas** y el alcalde de Ramos Arizpe, **Tomás Gutiérrez Merino**, acompañados por representantes de la empresa y autoridades estatales.
 
-Waelzholz fue fundada en Alemania en **1829** y cuenta con más de 190 años de trayectoria en la industria. Actualmente emplea a alrededor de **2 mil 300 personas** y mantiene presencia industrial en países como Alemania, Brasil, China, Austria, Estados Unidos e Italia.
+Waelzholz fue fundada en Alemania en **1829** y cuenta con más de 190 años de trayectoria en la industria. Actualmente, emplea a alrededor de **2 mil 300 personas** y mantiene presencia industrial en países como Alemania, Brasil, China, Austria, Estados Unidos e Italia.
 
 Durante el evento, Manolo Jiménez señaló que la instalación de la compañía forma parte de los proyectos de inversión que se han gestionado para Coahuila, mientras que Tomás Gutiérrez destacó la importancia de generar condiciones que permitan conservar las empresas establecidas y atraer nuevos proyectos al municipio.
 
