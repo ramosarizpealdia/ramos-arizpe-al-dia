@@ -453,6 +453,7 @@ function readNotes() {
         category,
         sections,
         author: String(data.author || "Ramos Arizpe al Día").trim(),
+        authorUrl: String(data.author_url || "").trim(),
         dateRaw,
         published,
         image: normalizeAssetPath(data.image || ""),
@@ -470,6 +471,74 @@ function readNotes() {
 
 function articleUrl(note) {
   return `/${slugify(note.category)}/${note.slug}/`;
+}
+
+function authorProfilePath(note) {
+  const authorSlug = slugify(note.author || "Ramos Arizpe al Día") || "ramos-arizpe-al-dia";
+  return `/autor/${authorSlug}/`;
+}
+
+function authorProfileUrl(note) {
+  const custom = String(note.authorUrl || "").trim();
+
+  if (!custom) {
+    return `${SITE_URL}${authorProfilePath(note)}`;
+  }
+
+  if (/^https?:\/\//i.test(custom)) {
+    return custom;
+  }
+
+  return `${SITE_URL}${custom.startsWith("/") ? custom : `/${custom}`}`;
+}
+
+function authorLinkHtml(note) {
+  const href = authorProfileUrl(note);
+  const isExternal = !href.startsWith(SITE_URL);
+  const extra = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
+  return `<a class="author-link" href="${escapeHtml(href)}"${extra}>${escapeHtml(note.author)}</a>`;
+}
+
+function authorPage(authorName, notes) {
+  const authorNotes = notes.filter(note => note.author === authorName);
+  const authorSlug = slugify(authorName) || "ramos-arizpe-al-dia";
+  const canonical = `${SITE_URL}/autor/${authorSlug}/`;
+
+  const cards = authorNotes.length
+    ? authorNotes.map(note => `<article class="archive-card">
+        <a href="${articleUrl(note)}">${img(note, "archive-image", "FOTO")}</a>
+        <div>
+          <span class="section-label">${escapeHtml(note.category)}</span>
+          <h2><a href="${articleUrl(note)}">${escapeHtml(note.title)}</a></h2>
+          ${note.summary ? `<p>${escapeHtml(note.summary)}</p>` : ""}
+          <div class="byline">${escapeHtml(formatDate(note.published, true))}</div>
+        </div>
+      </article>`).join("")
+    : `<p class="section-empty">Aún no hay publicaciones de este autor.</p>`;
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    mainEntity: {
+      "@type": authorName === "Ramos Arizpe al Día" ? "Organization" : "Person",
+      name: authorName,
+      url: canonical
+    }
+  };
+
+  return documentHtml({
+    title: `${authorName} | Autores | Ramos Arizpe al Día`,
+    description: `Consulta las publicaciones de ${authorName} en Ramos Arizpe al Día.`,
+    canonical,
+    extraHead: `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`,
+    body: `<main class="container archive-page">
+      <div class="page-heading">
+        <span class="section-kicker">AUTOR</span>
+        <h1>${escapeHtml(authorName)}</h1>
+      </div>
+      <div class="archive-list">${cards}</div>
+    </main>`
+  });
 }
 
 function noteInSection(note, category) {
@@ -857,7 +926,11 @@ function articlePage(note) {
     dateModified: note.published.toISOString(),
     mainEntityOfPage: canonical,
     image: [imageUrl],
-    author: { "@type": "Person", name: note.author },
+    author: {
+      "@type": note.author === "Ramos Arizpe al Día" ? "Organization" : "Person",
+      name: note.author,
+      url: authorProfileUrl(note)
+    },
     publisher: {
       "@type": "Organization",
       name: "Ramos Arizpe al Día",
@@ -879,7 +952,7 @@ function articlePage(note) {
         <div class="article-sections">${note.sections.map(section => `<a href="/${slugify(section)}/">${escapeHtml(section)}</a>`).join("")}</div>
         <h1>${escapeHtml(note.title)}</h1>
         ${note.summary ? `<p class="article-deck">${escapeHtml(note.summary)}</p>` : ""}
-        <div class="article-meta">Por <strong>${escapeHtml(note.author)}</strong> · ${escapeHtml(formatDate(note.published, true))}</div>
+        <div class="article-meta">Por <strong>${authorLinkHtml(note)}</strong> · ${escapeHtml(formatDate(note.published, true))}</div>
         ${note.image && (!localAssetFile(note.image) || fs.existsSync(localAssetFile(note.image))) ? `<figure class="article-media">
           <img class="article-hero" src="${escapeHtml(note.image)}" alt="${escapeHtml(note.imageCaption || note.title)}">
           ${note.imageCaption ? `<figcaption>${escapeHtml(note.imageCaption)}</figcaption>` : ""}
@@ -947,8 +1020,13 @@ function buildSitemaps(notes) {
     ...CATEGORIES.map(category => `/${slugify(category)}/`)
   ];
 
+  const authorUrls = [...new Set(
+    notes.map(note => authorProfilePath(note))
+  )];
+
   const urls = [
     ...staticUrls.map(url => `<url><loc>${SITE_URL}${url}</loc></url>`),
+    ...authorUrls.map(url => `<url><loc>${SITE_URL}${url}</loc></url>`),
     ...notes.map(note => `<url><loc>${SITE_URL}${articleUrl(note)}</loc><lastmod>${note.published.toISOString()}</lastmod></url>`)
   ];
 
@@ -1038,6 +1116,11 @@ function main() {
 
   for (const note of notes) {
     writeFile(`${slugify(note.category)}/${note.slug}/index.html`, articlePage(note));
+  }
+
+  const authors = [...new Set(notes.map(note => note.author).filter(Boolean))];
+  for (const authorName of authors) {
+    writeFile(`autor/${slugify(authorName) || "ramos-arizpe-al-dia"}/index.html`, authorPage(authorName, notes));
   }
 
   writeFile("quienes-somos/index.html", simplePage(
