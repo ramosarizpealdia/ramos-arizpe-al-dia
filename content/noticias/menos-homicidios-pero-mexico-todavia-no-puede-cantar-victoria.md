@@ -11,7 +11,7 @@ sections:
   - Política
 author: EL COMANCHE DE RAMOS
 date: 2026-08-12T01:14:00-06:00
-image: /uploads/a6140820-3f38-428d-b4cb-ccdb255ce62f.png
+image: /uploads/ca02fe23-d112-4538-a829-c8762ce7f53f.jpg
 image_caption: El Gobierno federal reportó una reducción de 51% en el promedio
   diario de homicidios dolosos entre septiembre de 2024 y julio de 2026; el
   desafío será mantener la tendencia y trasladarla a la vida cotidiana de la
