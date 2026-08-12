@@ -94,6 +94,30 @@ collections:
         widget: text
         required: false
         hint: "Describe brevemente lo que aparece en la fotografía. Este texto se mostrará debajo de la imagen dentro de la nota."
+      - label: "Te puede interesar (opcional)"
+        name: related_title
+        widget: string
+        required: false
+        hint: "Escribe el título exacto de la nota que deseas recomendar dentro del artículo."
+      - label: "Enlace de la nota recomendada"
+        name: related_url
+        widget: string
+        required: false
+        hint: "Pega la URL completa o la ruta de la nota. Ejemplo: /seguridad/titulo-de-la-nota/"
+      - label: "Imagen de la nota recomendada (opcional)"
+        name: related_image
+        widget: image
+        required: false
+        hint: "Puedes colocar una miniatura para que el bloque se vea como una recomendación editorial."
+      - label: "Colocar después del párrafo"
+        name: related_after
+        widget: number
+        required: false
+        default: 2
+        value_type: int
+        min: 1
+        max: 20
+        hint: "Ejemplo: 3 = después del tercer párrafo."
       - label: Destacar en portada
         name: featured
         widget: boolean
