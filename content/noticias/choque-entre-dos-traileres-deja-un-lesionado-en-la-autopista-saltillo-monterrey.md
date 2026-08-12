@@ -9,7 +9,7 @@ sections:
   - Estados
 author: Alejandro Recendiz
 date: 2026-08-12T10:08:00-06:00
-image: /uploads/concepciones-del-estado.jpeg
+image: /uploads/concepciones-del-estado.png
 image_caption: Dos tractocamiones estuvieron involucrados en un accidente a la
   altura del kilómetro 80 de la autopista Saltillo-Monterrey, en Santa Catarina,
   Nuevo León.
