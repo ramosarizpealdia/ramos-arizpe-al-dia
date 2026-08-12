@@ -88,14 +88,19 @@ function parseScalar(value) {
 }
 
 /**
- * Parser de front matter compatible con lo que escribe Decap CMS.
- * - Conserva las fechas como texto.
- * - Soporta listas YAML.
- * - Soporta texto multilínea con |, |-, > y >-.
- * - No toca el cuerpo Markdown de la noticia.
+ * Parser compatible con el front matter de Decap CMS.
+ *
+ * Corrige un caso importante:
+ *
+ * title: Texto muy largo que Decap parte aquí
+ *   y continúa en la siguiente línea
+ *
+ * El parser anterior sólo tomaba la primera línea.
+ * Este parser une las líneas indentadas que pertenecen al mismo campo.
  */
 function parseFrontMatter(raw, filename) {
   const normalized = String(raw).replace(/\r\n/g, "\n");
+
   if (!normalized.startsWith("---\n")) {
     throw new Error(`Front matter faltante en ${filename}`);
   }
@@ -110,6 +115,7 @@ function parseFrontMatter(raw, filename) {
   const data = {};
 
   let i = 0;
+
   while (i < headerLines.length) {
     const rawLine = headerLines[i].replace(/\t/g, "  ");
     const trimmed = rawLine.trim();
@@ -128,7 +134,7 @@ function parseFrontMatter(raw, filename) {
     const key = keyMatch[1];
     const rawValue = (keyMatch[2] ?? "").trim();
 
-    // YAML block scalar.
+    // Texto multilínea YAML con |, |-, > o >-
     if (/^[>|][+-]?$/.test(rawValue)) {
       const folded = rawValue.startsWith(">");
       const block = [];
@@ -136,6 +142,8 @@ function parseFrontMatter(raw, filename) {
 
       while (i < headerLines.length) {
         const candidate = headerLines[i].replace(/\t/g, "  ");
+
+        // Nueva clave principal = termina este bloque.
         if (/^[A-Za-z0-9_-]+:\s*/.test(candidate)) break;
 
         if (!candidate.trim()) {
@@ -145,7 +153,7 @@ function parseFrontMatter(raw, filename) {
         }
 
         if (/^\s+/.test(candidate)) {
-          block.push(candidate.replace(/^\s{2}/, ""));
+          block.push(candidate.replace(/^\s+/, ""));
           i++;
           continue;
         }
@@ -153,13 +161,21 @@ function parseFrontMatter(raw, filename) {
         break;
       }
 
-      data[key] = folded
-        ? block.join("\n").split(/\n{2,}/).map(p => p.replace(/\n/g, " ").trim()).join("\n\n").trim()
-        : block.join("\n").trim();
+      if (folded) {
+        data[key] = block
+          .join("\n")
+          .split(/\n{2,}/)
+          .map(p => p.replace(/\n/g, " ").trim())
+          .join("\n\n")
+          .trim();
+      } else {
+        data[key] = block.join("\n").trim();
+      }
+
       continue;
     }
 
-    // Empty value can introduce a YAML list.
+    // Valor vacío: puede ser lista YAML.
     if (rawValue === "") {
       const list = [];
       let j = i + 1;
@@ -177,8 +193,31 @@ function parseFrontMatter(raw, filename) {
       continue;
     }
 
-    data[key] = parseScalar(rawValue);
-    i++;
+    // Valor normal + posibles líneas de continuación indentadas.
+    const continuation = [];
+    let j = i + 1;
+
+    while (j < headerLines.length) {
+      const candidate = headerLines[j].replace(/\t/g, "  ");
+
+      // Si es una nueva clave principal, termina.
+      if (/^[A-Za-z0-9_-]+:\s*/.test(candidate)) break;
+
+      // Si inicia una lista, no pertenece al scalar actual.
+      if (/^\s*-\s+/.test(candidate)) break;
+
+      if (/^\s+/.test(candidate) && candidate.trim()) {
+        continuation.push(candidate.trim());
+        j++;
+        continue;
+      }
+
+      break;
+    }
+
+    const fullValue = [rawValue, ...continuation].join(" ").trim();
+    data[key] = parseScalar(fullValue);
+    i = j;
   }
 
   return { data, body };
@@ -530,9 +569,9 @@ function documentHtml({ title, description, canonical, body, extraHead = "" }) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700;8..60,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=final-20260811">
+  <link rel="stylesheet" href="/styles.css?v=parche-textos-20260811">
   ${extraHead}
-  <script defer src="/script.js?v=final-20260811"></script>
+  <script defer src="/script.js?v=parche-textos-20260811"></script>
 </head>
 <body>
 ${headerHtml()}
