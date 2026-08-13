@@ -385,7 +385,7 @@ function renderMarkdown(markdown = "") {
     if (heading) {
       flushParagraph();
       flushList();
-      const level = heading[1].length + 1;
+      const level = Math.max(2, heading[1].length);
       out.push(`<h${level}>${markdownInline(heading[2])}</h${level}>`);
       continue;
     }
@@ -515,24 +515,7 @@ function authorLinkHtml(note) {
   return `<a class="author-link" href="${escapeHtml(href)}"${extra}>${escapeHtml(note.author)}</a>`;
 }
 
-function authorPage(authorName, notes) {
-  const authorNotes = notes.filter(note => note.author === authorName);
-  const authorSlug = slugify(authorName) || "ramos-arizpe-al-dia";
-  const canonical = `${SITE_URL}/autor/${authorSlug}/`;
-
-  const cards = authorNotes.length
-    ? authorNotes.map(note => `<article class="archive-card">
-        <a href="${articleUrl(note)}">${img(note, "archive-image", "FOTO")}</a>
-        <div>
-          <span class="section-label">${escapeHtml(note.category)}</span>
-          <h2><a href="${articleUrl(note)}">${escapeHtml(note.title)}</a></h2>
-          ${note.summary ? `<p>${escapeHtml(note.summary)}</p>` : ""}
-          <div class="byline">${escapeHtml(formatDate(note.published, true))}</div>
-        </div>
-      </article>`).join("")
-    : `<p class="section-empty">Aún no hay publicaciones de este autor.</p>`;
-
-  const articleEnhancementCss = `<style>
+const ARTICLE_ENHANCEMENT_CSS = `<style>
     .article-body{font-size:clamp(1.08rem,2.7vw,1.22rem);line-height:1.78;color:#202020}
     .article-body p{margin:0 0 1.45em}
     .article-body h2,.article-body h3,.article-body h4,.article-body h5{font-family:Arial,Helvetica,sans-serif;color:#111;line-height:1.15;letter-spacing:-.02em}
@@ -550,6 +533,23 @@ function authorPage(authorName, notes) {
     .social-embed-x,.social-embed-fallback{padding:1.1em 1.2em;border:1px solid #d9d9d9;border-left:5px solid #0d4f8b;background:#fafafa;font-family:Arial,Helvetica,sans-serif}.social-embed-x span,.social-embed-fallback span{display:block;font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#666;margin-bottom:.45em}.social-embed-x a,.social-embed-fallback a{font-weight:800;text-decoration:none;color:#0d4f8b}
     @media(max-width:640px){.article-body{line-height:1.72}.article-body h2{margin-top:1.45em}.embed-instagram-wrap iframe{height:650px}.embed-tiktok-wrap,.embed-tiktok-wrap iframe{min-height:540px}}
   </style>`;
+
+function authorPage(authorName, notes) {
+  const authorNotes = notes.filter(note => note.author === authorName);
+  const authorSlug = slugify(authorName) || "ramos-arizpe-al-dia";
+  const canonical = `${SITE_URL}/autor/${authorSlug}/`;
+
+  const cards = authorNotes.length
+    ? authorNotes.map(note => `<article class="archive-card">
+        <a href="${articleUrl(note)}">${img(note, "archive-image", "FOTO")}</a>
+        <div>
+          <span class="section-label">${escapeHtml(note.category)}</span>
+          <h2><a href="${articleUrl(note)}">${escapeHtml(note.title)}</a></h2>
+          ${note.summary ? `<p>${escapeHtml(note.summary)}</p>` : ""}
+          <div class="byline">${escapeHtml(formatDate(note.published, true))}</div>
+        </div>
+      </article>`).join("")
+    : `<p class="section-empty">Aún no hay publicaciones de este autor.</p>`;
 
   const schema = {
     "@context": "https://schema.org",
@@ -1039,7 +1039,7 @@ function articlePage(note) {
     title: `${note.title} | Ramos Arizpe al Día`,
     description: note.summary || note.title,
     canonical,
-    extraHead: `${articleEnhancementCss}<meta property="og:type" content="article">
+    extraHead: `${ARTICLE_ENHANCEMENT_CSS}<meta property="og:type" content="article">
   <meta property="og:image" content="${escapeHtml(imageUrl)}">
   <meta property="article:published_time" content="${escapeHtml(note.published.toISOString())}">
   <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`,
