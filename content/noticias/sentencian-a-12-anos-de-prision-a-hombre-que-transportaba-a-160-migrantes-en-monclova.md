@@ -12,7 +12,7 @@ image: /uploads/img_3964.jpeg
 image_caption: Ponciano “N” fue sentenciado a 12 años de prisión por transportar
   a 160 personas migrantes en un tractocamión localizado en Monclova en 2022.
 related_after: 2
-featured: false
+featured: true
 ---
 A más de cuatro años de que **160 personas migrantes fueran localizadas dentro de la caja de un tráiler en Monclova**, Ponciano “N” recibió una sentencia de **12 años de prisión** por el delito de tráfico de migrantes con agravante.
 
