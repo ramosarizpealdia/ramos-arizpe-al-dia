@@ -23,7 +23,7 @@ related_title: Sentencian a 12 años de prisión a hombre que transportaba a 160
 related_url: https://ramosarizpealdia.com/coahuila/sentencian-a-12-anos-de-prision-a-hombre-que-transportaba-a-160-migrantes-en-monclova/
 related_image: /uploads/img_3964.jpeg
 related_after: 4
-featured: false
+featured: true
 ---
 Una mujer resultó lesionada durante una **discusión con su hijo adolescente** registrada la tarde del miércoles 12 de agosto en la colonia Nueva Jerusalén, en Saltillo.
 
