@@ -1313,7 +1313,7 @@ function main() {
     "Información sobre privacidad y uso de servicios técnicos en el sitio de Ramos Arizpe al Día."
   ));
 
-  writeFile("ads.txt", "google.com, pub-7431304169817805, DIRECT, f08c47fec0942fa0\\n");
+  writeFile("ads.txt", "google.com, pub-7431304169817805, DIRECT, f08c47fec0942fa0\n");
 
   buildSitemaps(notes);
   validateOutput(notes);
