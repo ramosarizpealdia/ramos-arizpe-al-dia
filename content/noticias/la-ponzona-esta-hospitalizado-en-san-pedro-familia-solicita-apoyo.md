@@ -23,7 +23,7 @@ related_title: Adolescente habría lesionado a su madre durante discusión en la
 related_url: https://ramosarizpealdia.com/saltillo/adolescente-habria-lesionado-a-su-madre-durante-discusion-en-la-nueva-jerusalen-de-saltillo/
 related_image: /uploads/machete-.jpeg
 related_after: 6
-featured: false
+featured: true
 ---
 Familiares de **José Guadalupe Luján Mena, conocido como “La Ponzoña”**, solicitaron apoyo ciudadano luego de que fuera hospitalizado en **San Pedro, Coahuila**, mientras realizaba un viaje de Torreón con destino a Saltillo.
 
