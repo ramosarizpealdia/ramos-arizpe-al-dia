@@ -20,7 +20,7 @@ La **Fiscalía General de la República (FGR)** informó este miércoles 12 de a
 
 De acuerdo con la información de la autoridad federal, Ponciano “N” conducía el tractocamión con semirremolque utilizado para transportar a **160 personas extranjeras que no contaban con documentación que acreditara su estancia regular en México** y que habían pagado para ser trasladadas hacia la frontera con Estados Unidos.
 
-**El caso ocurrió en Monclova en 2022**
+## **El caso ocurrió en Monclova en 2022**
 
 Los hechos se remontan a **marzo de 2022**, cuando el grupo fue localizado en la colonia Petrolera de Monclova después de que se reportara la presencia de numerosas personas en malas condiciones físicas.
 
@@ -30,7 +30,7 @@ Las personas se encontraban dentro de la caja del vehículo de carga y requirier
 
 En septiembre de ese mismo año, la FGR obtuvo la **vinculación a proceso de Ponciano “N”** por su probable responsabilidad en tráfico de migrantes. En ese momento, un juez federal también ordenó que permaneciera bajo prisión preventiva justificada en el penal varonil de Saltillo mientras avanzaba el procedimiento. 
 
-**El caso también derivó en investigaciones por las víctimas**
+## **El caso también derivó en investigaciones por las víctimas**
 
 Además del procedimiento federal por tráfico de migrantes, el caso tuvo otra vertiente ante las autoridades de Coahuila debido a las consecuencias que sufrieron algunas de las personas transportadas.
 
