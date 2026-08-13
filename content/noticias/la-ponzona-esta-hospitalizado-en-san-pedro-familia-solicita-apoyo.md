@@ -40,7 +40,3 @@ Ante esta situación, familiares y personas cercanas comenzaron una solicitud de
 La familia también realizó una aclaración ante versiones que comenzaron a circular sobre su supuesto fallecimiento: **José Guadalupe no ha muerto y continúa hospitalizado**, de acuerdo con la información proporcionada hasta el momento.
 
 Quienes deseen colaborar directamente con la familia pueden acudir al domicilio que proporcionaron, ubicado en **calle Comanches #1112, colonia Teresitas, en Saltillo**.
-
-Por seguridad, en una nota periodística abierta **no recomiendo publicar completo el número de tarjeta bancaria**. Para quienes quieran realizar una aportación mediante transferencia, lo más conveniente es remitirlos a la publicación original de la familia o proporcionar el dato únicamente a quienes lo soliciten, una vez corroborado que corresponde a la beneficiaria.
-
-La información sobre su condición médica puede cambiar, por lo que se mantiene pendiente cualquier actualización proporcionada por sus familiares o las autoridades de salud.
