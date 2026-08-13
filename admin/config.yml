@@ -100,6 +100,57 @@ collections:
         widget: text
         required: false
         hint: "Describe brevemente lo que aparece en la fotografía. Este texto se mostrará debajo de la imagen dentro de la nota."
+      - label: "Contenido incrustado 1 (opcional)"
+        name: embed_1_url
+        widget: string
+        required: false
+        hint: "Pega la URL de YouTube, TikTok, Facebook, Instagram o X. El sitio detecta la plataforma automáticamente."
+      - label: "Pie del contenido 1 (opcional)"
+        name: embed_1_caption
+        widget: text
+        required: false
+      - label: "Insertar contenido 1 después del párrafo"
+        name: embed_1_after
+        widget: number
+        required: false
+        default: 2
+        value_type: int
+        min: 1
+        max: 30
+      - label: "Contenido incrustado 2 (opcional)"
+        name: embed_2_url
+        widget: string
+        required: false
+        hint: "Segundo video o publicación social. Déjalo vacío si no lo necesitas."
+      - label: "Pie del contenido 2 (opcional)"
+        name: embed_2_caption
+        widget: text
+        required: false
+      - label: "Insertar contenido 2 después del párrafo"
+        name: embed_2_after
+        widget: number
+        required: false
+        default: 4
+        value_type: int
+        min: 1
+        max: 30
+      - label: "Contenido incrustado 3 (opcional)"
+        name: embed_3_url
+        widget: string
+        required: false
+        hint: "Tercer video o publicación social. Déjalo vacío si no lo necesitas."
+      - label: "Pie del contenido 3 (opcional)"
+        name: embed_3_caption
+        widget: text
+        required: false
+      - label: "Insertar contenido 3 después del párrafo"
+        name: embed_3_after
+        widget: number
+        required: false
+        default: 6
+        value_type: int
+        min: 1
+        max: 30
       - label: "Te puede interesar (opcional)"
         name: related_title
         widget: string
@@ -131,3 +182,4 @@ collections:
       - label: Contenido de la nota
         name: body
         widget: markdown
+        hint: "Usa ## para subtítulo grande, ### para subtítulo mediano, **negrita**, *cursiva*, > para cita destacada, listas, enlaces e imágenes dentro del cuerpo."
