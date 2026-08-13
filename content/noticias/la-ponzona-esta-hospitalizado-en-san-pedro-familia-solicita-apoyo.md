@@ -14,7 +14,7 @@ image: /uploads/img_3986.jpg
 image_caption: José Guadalupe Luján Mena, conocido como “La Ponzoña”, permanece
   hospitalizado en San Pedro, Coahuila, mientras su familia solicita apoyo para
   que su madre pueda trasladarse y acompañarlo.
-embed_1_url: "https://vt.tiktok.com/ZS4o6F9Ng/ "
+embed_1_url: /Users/alejandro/Downloads/AQPCwH6Sd7C7k_lwYwqup_2xmX6Cr7RoFFv-5IUWchiKX2tvg0sSlSabTDVs5SgbGSa03jk6mN4W2CazKhhenssFJai1wrPx-Dt0bS766gWpNw.MP4
 embed_1_after: 4
 embed_2_after: 4
 embed_3_after: 6
