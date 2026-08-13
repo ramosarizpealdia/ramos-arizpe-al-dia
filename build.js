@@ -673,6 +673,10 @@ function documentHtml({ title, description, canonical, body, extraHead = "" }) {
   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
   })(window,document,'script','dataLayer','GTM-5KCJ75CJ');</script>
   <!-- End Google Tag Manager -->
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7431304169817805"
+       crossorigin="anonymous"></script>
+  <!-- End Google AdSense -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
