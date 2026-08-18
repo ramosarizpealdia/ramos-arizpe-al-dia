@@ -22,8 +22,8 @@ embed_3_after: 6
 related_title: Bebé de un mes muere tras accidente vial en el Centro de Saltillo
 related_url: https://ramosarizpealdia.com/saltillo/bebe-de-un-mes-muere-tras-accidente-vial-en-el-centro-de-saltillo/
 related_image: /uploads/img_4279.jpg
-related_after: 4
-featured: false
+related_after: 5
+featured: true
 ---
 Pablo tenía **14 años y estaba a punto de comenzar una nueva etapa escolar**. Este lunes iniciaría su curso de inducción en la preparatoria y, según relataron personas cercanas a su familia, ya tenía listo el uniforme que utilizaría para acudir a clases. Sin embargo, la madrugada del domingo perdió la vida después de resultar gravemente herido durante una riña en la colonia Vicente Guerrero, al sur de Saltillo.
 
