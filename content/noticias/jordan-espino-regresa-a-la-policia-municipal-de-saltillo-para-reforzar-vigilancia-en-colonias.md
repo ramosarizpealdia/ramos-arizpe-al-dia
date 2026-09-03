@@ -18,7 +18,7 @@ embed_1_after: 2
 embed_2_after: 4
 embed_3_after: 6
 related_after: 2
-featured: false
+featured: true
 ---
 Jordan Espino Guzmán regresará a la Dirección de la Policía Municipal de Saltillo con la encomienda de fortalecer los patrullajes, la vigilancia en las colonias y las acciones de proximidad con la ciudadanía.
 
