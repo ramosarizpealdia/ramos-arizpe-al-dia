@@ -22,7 +22,7 @@ related_title: Ramos Arizpe acumula al menos cinco muertes confirmadas por
   rickettsiosis durante 2026
 related_url: https://ramosarizpealdia.com/ramos-arizpe/ramos-arizpe-acumula-al-menos-cinco-muertes-confirmadas-por-rickettsiosis-durante-2026/
 related_image: /uploads/9b343931-e0c2-4eff-8574-65272e359201.png
-related_after: 7
+related_after: 11
 featured: false
 ---
 **RAMOS ARIZPE, COAHUILA.-** Tres mujeres perdieron la vida y seis personas más resultaron lesionadas durante una **volcadura registrada la madrugada de este viernes 4 de septiembre** sobre la carretera federal 57, en el tramo **Saltillo-Monclova**, dentro del municipio de Ramos Arizpe.
