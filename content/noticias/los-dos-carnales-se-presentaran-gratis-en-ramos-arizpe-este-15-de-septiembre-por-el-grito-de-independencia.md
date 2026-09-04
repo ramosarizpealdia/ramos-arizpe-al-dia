@@ -18,7 +18,7 @@ embed_1_url: https://www.youtube.com/watch?v=DiL5qeAqkcc&list=RDDiL5qeAqkcc&star
 embed_1_caption: “La Pregunta del Millón” forma parte de los temas más conocidos
   de Los Dos Carnales, agrupación que se presentará gratis en Ramos Arizpe este
   15 de septiembre durante los festejos por el Grito de Independencia.
-embed_1_after: 18
+embed_1_after: 15
 embed_2_after: 4
 embed_3_after: 6
 related_title: Volcadura en carretera Saltillo-Monclova deja tres mujeres
