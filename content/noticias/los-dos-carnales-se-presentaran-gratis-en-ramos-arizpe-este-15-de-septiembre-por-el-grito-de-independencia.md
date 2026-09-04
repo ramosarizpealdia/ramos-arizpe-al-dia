@@ -25,7 +25,7 @@ related_title: Volcadura en carretera Saltillo-Monclova deja tres mujeres
   muertas y seis lesionados en Ramos Arizpe
 related_url: https://ramosarizpealdia.com/ramos-arizpe/volcadura-en-carretera-saltillo-monclova-deja-tres-mujeres-muertas-y-seis-lesionados-en-ramos-arizpe/
 related_image: /uploads/img_5066.jpg
-related_after: 14
+related_after: 11
 featured: true
 ---
 **RAMOS ARIZPE, COAHUILA.-** Los Dos Carnales serán los artistas principales de la celebración del **Grito de Independencia 2026 en Ramos Arizpe**, donde ofrecerán un concierto gratuito la noche del próximo **martes 15 de septiembre** frente a la Presidencia Municipal.
