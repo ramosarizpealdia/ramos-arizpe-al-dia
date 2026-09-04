@@ -1,6 +1,5 @@
 ---
-title: Los Dos Carnales se presentarán gratis en Ramos Arizpe este 15 de
-  septiembre por el Grito de Independencia
+title: "Los Dos Carnales se presentarán gratis en Ramos Arizpe este 15 de septiembre "
 summary: La agrupación originaria de Coahuila encabezará los festejos patrios
   frente a la Presidencia Municipal; será su primera presentación pública y
   gratuita en la ciudad
