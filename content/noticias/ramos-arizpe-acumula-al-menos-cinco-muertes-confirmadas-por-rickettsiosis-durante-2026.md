@@ -9,7 +9,7 @@ sections:
   - Coahuila
   - Región Sureste
 author: Alejandro Recendiz
-date: 2026-09-03T23:48:00-06:00
+date: 2026-09-04T08:00:00-06:00
 image: /uploads/9b343931-e0c2-4eff-8574-65272e359201.png
 image_caption: Ramos Arizpe acumula al menos cinco fallecimientos confirmados
   por rickettsiosis durante 2026, registrados en diferentes sectores del
