@@ -78,41 +78,11 @@ Después del fallecimiento, las muestras fueron analizadas por el **Laboratorio
 
 Con la información disponible hasta los primeros días de septiembre, los casos mortales confirmados en Ramos Arizpe durante 2026 quedan de la siguiente manera:
 
-* **Febrero:**
-
-   menor de 16 años, residente de 
-
-  **Manantiales del Valle**
-
-  .
-* **Febrero:**
-
-   menor de 12 años, residente de 
-
-  **Manantiales del Valle**
-
-  .
-* **12 de marzo:**
-
-   niño de 9 años, residente de 
-
-  **Urbivilla del Real**
-
-  .
-* **Julio:**
-
-   menor residente de 
-
-  **Cañadas del Mirador**
-
-  , inicialmente investigado como probable y posteriormente confirmado.
-* **22 de agosto:**
-
-   niño de 12 años residente de 
-
-  **Ramos Arizpe**
-
-  , confirmado mediante estudios de laboratorio.
+* **Febrero:** menor de 16 años, residente de **Manantiales del Valle.**
+* **Febrero:** menor de 12 años, residente de **Manantiales del Valle.**
+* **12 de marzo:** niño de 9 años, residente de **Urbivilla del Real**.
+* **Julio:** menor residente de **Cañadas del Mirador**, inicialmente investigado como probable y posteriormente confirmado.
+* **22 de agosto:** niño de 12 años residente de **Ramos Arizpe**, confirmado mediante estudios de laboratorio.
 
 De esta forma, el municipio registra **al menos cinco fallecimientos confirmados por rickettsiosis en lo que va de 2026**.
 
