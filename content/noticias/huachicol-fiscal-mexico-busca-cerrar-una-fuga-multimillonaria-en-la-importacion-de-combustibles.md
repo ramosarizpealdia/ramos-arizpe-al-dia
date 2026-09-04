@@ -10,6 +10,7 @@ sections:
   - Seguridad
   - Economía
   - Opinión
+  - Política
 author: El Comanche de Ramos
 date: 2026-09-04T10:00:00-06:00
 image: /uploads/chatgpt-image-4-sept-2026-01_22_49-a.m..png
