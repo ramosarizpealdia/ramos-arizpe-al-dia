@@ -8,7 +8,7 @@ category: Ramos Arizpe
 sections:
   - Coahuila
   - Región Sureste
-author: "Redacción "
+author: Alejandro Recendiz
 date: 2026-09-04T13:20:00-06:00
 image: /uploads/chatgpt-image-4-sept-2026-01_40_24-p.m..png
 image_caption: Los Dos Carnales encabezarán el Grito de Independencia 2026 en
