@@ -18,14 +18,14 @@ embed_1_url: https://www.youtube.com/watch?v=DiL5qeAqkcc&list=RDDiL5qeAqkcc&star
 embed_1_caption: “La Pregunta del Millón” forma parte de los temas más conocidos
   de Los Dos Carnales, agrupación que se presentará gratis en Ramos Arizpe este
   15 de septiembre durante los festejos por el Grito de Independencia.
-embed_1_after: 15
+embed_1_after: 16
 embed_2_after: 4
 embed_3_after: 6
 related_title: Volcadura en carretera Saltillo-Monclova deja tres mujeres
   muertas y seis lesionados en Ramos Arizpe
 related_url: https://ramosarizpealdia.com/ramos-arizpe/volcadura-en-carretera-saltillo-monclova-deja-tres-mujeres-muertas-y-seis-lesionados-en-ramos-arizpe/
 related_image: /uploads/img_5066.jpg
-related_after: 11
+related_after: 12
 featured: true
 ---
 **RAMOS ARIZPE, COAHUILA.-** Los Dos Carnales serán los artistas principales de la celebración del **Grito de Independencia 2026 en Ramos Arizpe**, donde ofrecerán un concierto gratuito la noche del próximo **martes 15 de septiembre** frente a la Presidencia Municipal.
@@ -64,9 +64,7 @@ Entre sus temas más reconocidos se encuentran:
 
 * **“El Envidioso”**
 * **“Vida Ventajosa”**
-* **“Cabrón y Vago”**
-
-  , junto a El Fantasma
+* **“Cabrón y Vago”**, junto a El Fantasma
 * **“El Borracho”**
 * **“Yo Soy Rico”**
 * **“La Pregunta del Millón”**
