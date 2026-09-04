@@ -9,7 +9,7 @@ sections:
   - Coahuila
   - Región Sureste
 author: Ramos Arizpe al Día
-date: 2026-09-03T17:00:00-06:00
+date: 2026-09-03T20:00:00-06:00
 image: /uploads/img_5063.jpg
 image_caption: Un total de 1,466 trabajadores de la Comisaría de Seguridad y
   Protección Ciudadana de Saltillo tendrán acceso a créditos Infonavit de hasta
