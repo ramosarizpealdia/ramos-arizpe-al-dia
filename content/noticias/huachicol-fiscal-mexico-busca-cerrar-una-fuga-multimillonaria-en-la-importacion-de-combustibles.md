@@ -12,7 +12,7 @@ sections:
   - Opinión
   - Política
 author: El Comanche de Ramos
-date: 2026-09-04T10:00:00-06:00
+date: 2026-09-04T06:00:00-06:00
 image: /uploads/chatgpt-image-4-sept-2026-01_22_49-a.m..png
 image_caption: El Gobierno federal reforzará los mecanismos de trazabilidad de
   los combustibles para detectar importaciones irregulares, evasión del IEPS y
