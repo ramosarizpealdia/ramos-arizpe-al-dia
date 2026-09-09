@@ -14,7 +14,7 @@ image: /uploads/img_5320.jpg
 image_caption: Elementos de emergencia y autoridades atendieron el fatal
   accidente registrado en la carretera Saltillo-Zacatecas, donde dos
   trabajadores de una empresa de traslado de valores perdieron la vida.
-embed_1_url: "https://www.facebook.com/share/v/1F96MwPymS/?mibextid=wwXIfr "
+embed_1_url: ""
 embed_1_after: 3
 embed_2_after: 4
 embed_3_after: 6
